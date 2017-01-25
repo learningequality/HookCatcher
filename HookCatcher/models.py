@@ -25,15 +25,15 @@ class Image(models.Model):
 	browser_type = models.CharField(max_length=200)
 	state = models.ForeignKey(State, on_delete=models.CASCADE)#many Images to one State (for multiple browsers)
 	def __str__(self):
-		return '%s_img' % self.state.state_name
+		return '%s_img%s' % (self.state.state_name, self.state.id)
 
 
 @python_2_unicode_compatible
 class Diff(models.Model):
 	id = models.AutoField(primary_key=True)
-	test_state = models.ForeignKey(Image, related_name='where_isTest', on_delete=models.CASCADE)#many Diffs to one Image
-	control_state = models.ForeignKey(Image, related_name='where_isControl', on_delete=models.CASCADE)#many Diffs to one Image
+	test_state_img = models.ForeignKey(Image, related_name='where_isTest', on_delete=models.CASCADE)#many Diffs to one Image
+	control_state_img = models.ForeignKey(Image, related_name='where_isControl', on_delete=models.CASCADE)#many Diffs to one Image
 	diff_img_url = models.URLField(max_length=200)
 	diff_percent = models.DecimalField(max_digits=6,decimal_places=3,default=Decimal('0.00'))
 	def __str__(self):
-		return '%s diff %s' % (self.test_state, self.control_state)
+		return '%s diff %s' % (self.test_state_img, self.control_state_img)
