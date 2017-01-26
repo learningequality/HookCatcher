@@ -12,8 +12,11 @@ class State(models.Model):
 	state_name = models.CharField(max_length=200)
 	state_desc = models.TextField()
 	state_json = models.TextField()
-	github_source_type = models.CharField(max_length=200)
-	github_source_id = models.CharField(max_length=200)
+	git_source_type = models.CharField(max_length=200) # PR or BRANCH
+	git_pr_number = models.IntegerField() #null if type = BRANCH
+	git_branch_name = models.CharField(max_length=200,) # null if type == PR
+	git_commit = models.CharField(max_length=200) # unique ID of the git tree for this state
+
 	def __str__(self):
 		return self.state_name
 
@@ -23,6 +26,9 @@ class Image(models.Model):
 	id = models.AutoField(primary_key=True)
 	state_img_url = models.URLField(max_length=200)	
 	browser_type = models.CharField(max_length=200)
+	operating_system = models.CharField(max_length=200)
+	width = models.IntegerField(null=True)# int width of image
+	height = models.IntegerField(null=True) # int width of height
 	state = models.ForeignKey(State, on_delete=models.CASCADE)#many Images to one State (for multiple browsers)
 	def __str__(self):
 		return '%s_img%s' % (self.state.state_name, self.state.id)
@@ -31,8 +37,8 @@ class Image(models.Model):
 @python_2_unicode_compatible
 class Diff(models.Model):
 	id = models.AutoField(primary_key=True)
-	test_state_img = models.ForeignKey(Image, related_name='where_isTest', on_delete=models.CASCADE)#many Diffs to one Image
-	control_state_img = models.ForeignKey(Image, related_name='where_isControl', on_delete=models.CASCADE)#many Diffs to one Image
+	source_state_img = models.ForeignKey(Image, related_name='where_isTest', on_delete=models.CASCADE)#many Diffs to one Image
+	target_state_img = models.ForeignKey(Image, related_name='where_isControl', on_delete=models.CASCADE)#many Diffs to one Image
 	diff_img_url = models.URLField(max_length=200)
 	diff_percent = models.DecimalField(max_digits=6,decimal_places=3,default=Decimal('0.00'))
 	def __str__(self):
