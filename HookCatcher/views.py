@@ -3,17 +3,24 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import State, Image, Diff
 import json, requests
+import sh
+
 # must import models and save to models
 @csrf_exempt
 def index(request):
 	
+	'''
+	GITHUB WEBHOOK HANDLER
 
-	'''if request.method == 'POST':
+	if request.method == 'POST':
 		gitData = request.body
 		gitJSON = json.loads(gitData)
 		print '\nRaw Data: "%s"\n' % gitJSON['zen']
-	
 	'''
+
+	'''
+	BROWSERSTACK API HANDLER
+
 	headers = {
 	    'Content-Type': 'application/json',
 	    'Accept': 'application/json',
@@ -26,15 +33,16 @@ def index(request):
 
 	postRequest = requests.post('https://www.browserstack.com/screenshots', headers=headers, data=data, auth=('mingdai1', 'dfTNku6CERcRaExPs6KF'))
 	print 'Response Text: "%s"\n' % postRequest.text
-
+	'''
 	
 
 	return render(request, 'index.html',)
 
 def BSresponse(request):
+	'''
 	if request.method == 'POST':
 		JSONbsReply = json.loads(request.body)
 		print 'Callback Reply: "%s"\n' % JSONbsReply
-
+	'''
 	return render(request, 'BSresponse/index.html')
 # Create your views here.
