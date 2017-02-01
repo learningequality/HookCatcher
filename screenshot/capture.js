@@ -10,6 +10,9 @@ var imgName = "screenshot.jpeg";//default image name of screenshot = screenshot.
 var imgWidth = "1024";//default image size = 1024 x 768
 var imgHeight = "768";
 
+
+//Shell command: phantomjs capture.js <url> <imgName> <imageWidth> <imageHeight>
+//!!!Need to change back to 2	
 if(args.length > 0) //need to provie at least screenshot URL,and  name of the screenshot to be saved as 
 {
 	var i;
@@ -30,7 +33,6 @@ if(args.length > 0) //need to provie at least screenshot URL,and  name of the sc
 				imgHeight = args[4];
 				break;
 		}
-
 	}
 
 	console.log("Rendering screenshot of: " + URL + " to file: " + imgName + " with dimensions: " + imgWidth + "x" + imgHeight);
