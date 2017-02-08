@@ -16,8 +16,8 @@ def index(request):
 		gitData = request.body
 		gitJSON = json.loads(gitData)
 		print '\nRaw Data: "%s"\n' % gitJSON['zen']
-	'''
-
+	
+'''
 	'''
 	BROWSERSTACK API HANDLER
 

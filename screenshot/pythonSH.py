@@ -30,24 +30,45 @@ def switchBranch(gitBranch):
 	#img1 = the file name of the image being compared by
 	#img2 = the file name of the image being compared to
 def createDiff(img1, img2):
-	comparisonIMG = 'exploreMasterLarge.jpeg'
-	diffIMG = comparisonIMG + '_' + screenshotName + '.png'
-	sh.compare(comparisonIMG + ' ' + screenshotName + ' ' + diffIMG)
+	diffIMG = img1 + '_' + img2 + 'DIFF.png'
+
+	# try: coffee(event.src_path)
+	# 
+
+	try:
+		sh.compare('{0}/{1}.jpeg'.format(IMAGES_DIR, img1), '{0}/{1}.jpeg'.format(IMAGES_DIR, img2), '{0}/{1}'.format(IMAGES_DIR, diffIMG))
+	except sh.ErrorReturnCode_1 as e:
+		print "FAILURE? maybe not", e.stderr
+
+
+
 
 gitBranches = ['test-pr', 'test-master']
 
 states = [('explore', 'http://localhost:8000/learn/#/explore/5b1e904335ab4dfda82e3e37735262c5'), 
 			('learn', 'http://localhost:8000/learn/#/learn/5b1e904335ab4dfda82e3e37735262c5')]
 
-for branchToggle in gitBranches:
-	switchBranch(branchToggle)
-	for stateTuple in states:
-		genScreenshot(stateTuple[1], '{0}_{1}'.format(branchToggle, stateTuple[0]))
+
+
+
+for stateTuple in states: #change to next state
+	imgArray = ['',''] #save name of file for each branch in this array
+	
+	for idxBranch, branchToggle in enumerate(gitBranches): #change to next branch
+		tempFilename = '{0}_{1}'.format(branchToggle, stateTuple[0])
+		imgArray[idxBranch] = '{0}'.format(tempFilename)
+		print(imgArray[idxBranch])
+
+		genScreenshot(stateTuple[1], tempFilename)
+		switchBranch(branchToggle)#switch the branch and take another screenshot of the state
+	
+	print('DIFFF ' + imgArray[0] + ' WITHH '+ imgArray[1])
+	createDiff(imgArray[0],imgArray[1])
 
 '''
 Insert IMage info to model
 
-
+'''
 
 
 

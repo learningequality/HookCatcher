@@ -8,21 +8,18 @@ import uuid
 
 @python_2_unicode_compatible
 class State(models.Model):
-	id = models.AutoField(primary_key=True)
 	state_name = models.CharField(max_length=200)
 	state_desc = models.TextField()
 	state_json = models.TextField()
 	git_source_type = models.CharField(max_length=200) # PR or BRANCH
 	git_source_name = models.CharField(max_length=200) #if Branch then branch name, if PR then PR number
 	git_commit = models.CharField(max_length=200) # unique ID of the git tree for this state
-
 	def __str__(self):
-		return self.state_name
+		return '%s %s_%s' % (self.state_name, self.git_source_type, self.git_source_name)
 
 
 @python_2_unicode_compatible
 class Image(models.Model):
-	id = models.AutoField(primary_key=True)
 	state_img_url = models.URLField(max_length=200)	
 	browser_type = models.CharField(max_length=200)
 	operating_system = models.CharField(max_length=200)
@@ -30,15 +27,16 @@ class Image(models.Model):
 	height = models.IntegerField(null=True) # int width of height
 	state = models.ForeignKey(State, on_delete=models.CASCADE)#many Images to one State (for multiple browsers)
 	def __str__(self):
-		return '%s_img%s %s' % (self.state.state_name, self.state.git_source_type, self.state.git_source_name)
+		return 'img_%s_%s_%s' % (self.state.state_name, self.state.git_source_type, self.state.git_source_name)
 
 
 @python_2_unicode_compatible
 class Diff(models.Model):
-	id = models.AutoField(primary_key=True)
-	before_state_img = models.ForeignKey(Image, related_name='_isBeforeState', on_delete=models.CASCADE)#many Diffs to one Image GITHUB HEADFORK
-	after_state_img = models.ForeignKey(Image, related_name='_isAfterState', on_delete=models.CASCADE)#many Diffs to one Image (resutlting BASEFORK)
+	before_state_img = models.ForeignKey(Image, related_name='isBeforeState', on_delete=models.CASCADE)#GITHUB BASE FORK many Diffs to one Image 
+	after_state_img = models.ForeignKey(Image, related_name='isAfterState', on_delete=models.CASCADE)#many Diffs to one Image (resutltingBASEFORK after merging/PR)
 	diff_img_url = models.URLField(max_length=200)
 	diff_percent = models.DecimalField(max_digits=6,decimal_places=3,default=Decimal('0.00'))
 	def __str__(self):
-		return '%s diff %s' % (self.before_state_img, self.after_state_img)
+		return '%s DIFF %s' % (self.before_state_img, self.after_state_img)
+
+
