@@ -36,8 +36,8 @@ class Image(models.Model):
 @python_2_unicode_compatible
 class Diff(models.Model):
 	id = models.AutoField(primary_key=True)
-	before_state_img = models.ForeignKey(Image, related_name='_isBeforeState', on_delete=models.CASCADE)#many Diffs to one Image
-	after_state_img = models.ForeignKey(Image, related_name='_isAfterState', on_delete=models.CASCADE)#many Diffs to one Image
+	before_state_img = models.ForeignKey(Image, related_name='_isBeforeState', on_delete=models.CASCADE)#many Diffs to one Image GITHUB HEADFORK
+	after_state_img = models.ForeignKey(Image, related_name='_isAfterState', on_delete=models.CASCADE)#many Diffs to one Image (resutlting BASEFORK)
 	diff_img_url = models.URLField(max_length=200)
 	diff_percent = models.DecimalField(max_digits=6,decimal_places=3,default=Decimal('0.00'))
 	def __str__(self):

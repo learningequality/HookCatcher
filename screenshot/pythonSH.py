@@ -2,7 +2,7 @@ import sh
 #sh.cd('..')
 from os import path
 
-KOLIBRI_DIR = path.abspath("../../../Github/kolibri")
+KOLIBRI_DIR = path.abspath("../../kolibri")
 IMAGES_DIR = "gen-images"
 
 
@@ -23,9 +23,8 @@ def genScreenshot(url, fileName):
 def switchBranch(gitBranch):
 	kolibri_git_dir = path.abspath(path.join(KOLIBRI_DIR, '.git'))
 	print('kolibri dir: ' + kolibri_git_dir)
-	working_dir = path.abspath('')
-	print('working dir:' + working_dir)
-	print(sh.git('--git-dir', kolibri_git_dir, '--work-tree', working_dir, 'status'))
+
+	print(sh.git('--git-dir', kolibri_git_dir, '--work-tree', KOLIBRI_DIR, 'checkout', gitBranch))
 
 #pass in two file names and generate a new fle
 	#img1 = the file name of the image being compared by
@@ -44,6 +43,15 @@ for branchToggle in gitBranches:
 	switchBranch(branchToggle)
 	for stateTuple in states:
 		genScreenshot(stateTuple[1], '{0}_{1}'.format(branchToggle, stateTuple[0]))
+
+'''
+Insert IMage info to model
+
+
+
+
+
+
 
 # In [4]: git_dir = os.path.abspath(os.path.join('HookCatcherProj', '.git'))
 
