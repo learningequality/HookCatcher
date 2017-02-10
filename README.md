@@ -1,4 +1,4 @@
-HookCatcher
+**HookCatcher**
 
 Generate perceptual diff of Kolibri states.
 
