@@ -5,6 +5,8 @@ from .models import State, Image, Diff
 import json, requests
 import sh
 
+URL_BASE = "https://github.com/MingDai/kolibri/pull/6/commits/"
+
 # must import models and save to models
 @csrf_exempt
 def index(request):
@@ -34,9 +36,29 @@ def index(request):
 	postRequest = requests.post('https://www.browserstack.com/screenshots', headers=headers, data=data, auth=('mingdai1', 'dfTNku6CERcRaExPs6KF'))
 	print 'Response Text: "%s"\n' % postRequest.text
 	'''
+
+	def stateRepresentation(stateObj):
+		#get all the URLs of the images that are of this state
+
+
+		return {
+			'name': stateObj.state_name,
+			'desc': stateObj.state_desc,
+			'gitType': stateObj.git_source_type,
+			'gitName': stateObj.git_source_name,
+			'gitCommitURL': URL_BASE + stateObj.git_commit,
+			'imgsOfState': stateObj.image_set.all()
+		}
 	
 
-	return render(request, 'index.html',)
+
+	allStates = State.objects.all()
+
+	statesFormatted = [stateRepresentation(state) for state in allStates]
+
+	return render(request, 'index.html',{'states_list': statesFormatted})
+
+
 
 def BSresponse(request):
 	'''

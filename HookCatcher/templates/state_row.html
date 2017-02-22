@@ -1,0 +1,10 @@
+<tr class="listItem">
+    <td>
+        <h4>{{i.state.state_name}} 
+        {{<i class="q"></i>.git_source_type}} {{i.state.git_source_name}}</h4>
+        <p>{{i.state.state_desc}}</p>
+    </td>
+    <td>
+        <a href="{{gen_url(i.state.git_commit)}}" class="git_commit_text">git commit: {{i.state.git_commit}} </a>
+    </td>
+</tr>
