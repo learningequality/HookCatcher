@@ -4,5 +4,5 @@ from . import views
 
 urlpatterns = [
 	url(r'^$', views.index, name ='index'),
-	url(r'^BSresponse/$', views.BSresponse, name='BSresponse'),
+	url(r'^PR/(?P<gitPRnumber>[0-9]+)/$', views.singlePR, name='singlePR'),
 ]
