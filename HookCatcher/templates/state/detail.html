@@ -1,0 +1,72 @@
+
+<html>
+
+	<head>
+    	<meta charset="utf-8">
+
+        {% load static %}
+        <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+
+        <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/style.css' %}"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+        {% if states_list %}
+
+        <div class="menu">
+            <div class="menuTitle">
+                <h3>learningequality/kolibri</h3>
+
+                <div>
+                    {{gitType}} {{gitName}}<br>
+                    Build #2287: exercise-attempts progress
+                </div>
+            </div>
+            <div class="menuDetail">
+                <p>
+                    { states_length} total states
+                </p>
+                
+                <button class="menuButtons">
+                    Sort by Diff%
+                </button>
+
+                <button class="menuButtons">
+                    List View
+                </button>
+            </div>
+        </div>
+        <div class="listContainer">
+            <h2> List of States in {{gitType}} {{gitName}}</h2>
+            <table>
+                {%for state in states_list%}
+                <tr class="listItem">
+                    <td class="thumbnail">
+                        {%for screenshot in state.imgsOfState%}
+                            <img src="{% static screenshot.state_img_url %}"> 
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <h4>{{state.name}} 
+                        {{state.gitType}} {{state.gitName}}</a>
+                        </h4>
+                        <p>{{state.desc}}</p>
+                    </td>
+                    <td>
+                        <a href="{{state.gitCommitURL}}" class="git_commit_text">git commit: {{state.gitCommitURL}} </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <!-- IMAGEs-->
+            {%for state in states_list%}
+                {%for screenshot in state.imgsOfState%}
+                    <img class="imgScreenshot" src="{% static screenshot.state_img_url %}"> 
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% else %}
+            <p><h1> This state does not exist in the system</h1></p>
+        {% endif %}
+    </body>
+</html>
