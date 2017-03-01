@@ -1,7 +1,8 @@
 from django.shortcuts import render
+from django.http import Http404
 from django.views.decorators.csrf import csrf_exempt
-
 from .models import State, Image, Diff
+
 import json, requests
 import sh
 
@@ -38,28 +39,37 @@ def index(request):
 	'''
 	return render(request, 'index.html')
 
-
-def singlePR(request, gitPRnumber):
-
-	def stateRepresentation(stateObj):
-		#get all the URLs of the images that are of this state
-		print(gitPRnumber)
-		return {
-			'name': stateObj.state_name,
-			'desc': stateObj.state_desc,
-			'gitType': stateObj.git_source_type,
-			'gitName': stateObj.git_source_name,
-			'gitCommitURL': URL_BASE + stateObj.git_commit,
-			'imgsOfState': stateObj.image_set.all()
+def stateRepresentation(stateObj):
+	#get all the URLs of the images that are of this state
+	return {
+		'name': stateObj.state_name,
+		'desc': stateObj.state_desc,
+		'gitType': stateObj.git_source_type,
+		'gitName': stateObj.git_source_name,
+		'gitCommitURL': URL_BASE + stateObj.git_commit,
+		'imgsOfState': stateObj.image_set.all()
 		}
 
+def singleState(request, gitSource, gitSourceID):
+	gitSource = gitSource.upper()
+	if (gitSource.upper() != 'BRANCH' and gitSource.upper() != 'PR'):
+		raise Http404("Choose a Github Branch or PR to view")
 
-
-	allStates = State.objects.all()
-
+	allStates = State.objects.filter(git_source_type=gitSource).filter(git_source_name=gitSourceID)
 	statesFormatted = [stateRepresentation(state) for state in allStates]
 
-	return render(request, 'singleGitSource/index.html',{'states_list': statesFormatted})
+	return render(request, 'state/detail.html',{'states_list': statesFormatted, 'gitType': gitSource, 'gitName': gitSourceID})
+
+
+def allStates(request):
+	allStates = State.objects.all()
+	statesFormatted = [stateRepresentation(state) for state in allStates]
+	return render(request, 'state/index.html',{'states_list': statesFormatted, 'states_length': len(statesFormatted)})
+
+
+def allDiffs(request):
+		
+	return 
 
 def BSresponse(request):
 	'''
