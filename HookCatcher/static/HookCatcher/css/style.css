@@ -25,7 +25,19 @@ table, tr
 .menuTitle
 {
     display: flex;
+    justify-content: space-around;
+    font-size: 1.2rem;
+}
+
+.menuDetail
+{
+    display: flex;
     justify-content: space-between;
+}
+
+.menuDetail button
+{
+
 }
 
 .listContainer
@@ -53,5 +65,17 @@ table, tr
 
 .menuButtons
 {
-    padding: .5rem 1rem;
+    padding: 0rem 1rem;
+}
+
+.git_commit_text
+{
+    font-size: .75rem;
+    color: blue;
+}
+
+.imgScreenshot
+{
+    border: .1rem solid black;
+    margin: 2rem auto;
 }

@@ -20,7 +20,7 @@ class State(models.Model):
 
 @python_2_unicode_compatible
 class Image(models.Model):
-	state_img_url = models.URLField(max_length=200)	
+	state_img_url = models.CharField(max_length=200)	
 	browser_type = models.CharField(max_length=200)
 	operating_system = models.CharField(max_length=200)
 	width = models.IntegerField(null=True)# int width of image
@@ -34,7 +34,7 @@ class Image(models.Model):
 class Diff(models.Model):
 	before_state_img = models.ForeignKey(Image, related_name='isBeforeState', on_delete=models.CASCADE)#GITHUB BASE FORK many Diffs to one Image 
 	after_state_img = models.ForeignKey(Image, related_name='isAfterState', on_delete=models.CASCADE)#many Diffs to one Image (resutltingBASEFORK after merging/PR)
-	diff_img_url = models.URLField(max_length=200)
+	diff_img_url = models.CharField(max_length=200)
 	diff_percent = models.DecimalField(max_digits=6,decimal_places=3,default=Decimal('0.00'))
 	def __str__(self):
 		return '%s DIFF %s' % (self.before_state_img, self.after_state_img)
