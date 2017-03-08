@@ -63,8 +63,10 @@ def createDiff(img1, img2):
 
     gitBranches = ['test-pr', 'test-master']
 
-    states = [('explore', 'http://localhost:8000/learn/#/explore/5b1e904335ab4dfda82e3e37735262c5'),  # noqa: E501
-              ('learn', 'http://localhost:8000/learn/#/learn/5b1e904335ab4dfda82e3e37735262c5')]  # noqa: E501
+    states = [
+        ('explore', 'http://localhost:8000/learn/#/explore/5b1e904335ab4dfda82e3e37735262c5'),
+        ('learn', 'http://localhost:8000/learn/#/learn/5b1e904335ab4dfda82e3e37735262c5')
+    ]
 
     for stateTuple in states:   # change to next state
         imgArray = ['', '']     # save name of file for each branch in aray
