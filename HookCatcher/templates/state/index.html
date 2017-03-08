@@ -17,15 +17,15 @@
                 <h3>learningequality/kolibri</h3>
 
                 <div>
-                    {{gitType}} {{gitName}}<br>
+                    {{state.gitType}} {{state.gitName}}<br>
                     Build #2287: exercise-attempts progress
                 </div>
             </div>
             <div class="menuDetail">
                 <p>
-                    {{states_length}} total states
+                    {{ states_list|length }} total states
                 </p>
-                
+
                 <button class="menuButtons">
                     Sort by Diff%
                 </button>
@@ -41,8 +41,8 @@
                 {%for state in states_list%}
                 <tr class="listItem">
                     <td>
-                        <h4>{{state.name}} 
-                        <a href="{{state.gitType}}/{{state.gitName}}">
+                        <h4>{{state.name}}
+                        <a href="{{state.gitType | lower}}/{{state.gitName}}">
                         {{state.gitType}} {{state.gitName}}</a></h4>
                         <p>{{state.desc}}</p>
                     </td>

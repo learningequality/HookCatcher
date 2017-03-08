@@ -22,7 +22,7 @@
         </div>
       </div>
       <div class="menuDetail">
-        <p>{ states_length} total states</p>
+        <p>{{ states_list|length }} total states</p>
         <button class="menuButtons">Sort by Diff%</button>
         <button class="menuButtons">List View</button>
       </div>
@@ -36,7 +36,7 @@
           <tr class="listItem">
             <td class="thumbnail">
               {%for screenshot in state.imgsOfState%}
-                <img src="{% static screenshot.state_img_url %}">
+                <img src="{% url 'getImage' screenshot.state_img_url %}">
               {% endfor %}
             </td>
             <td>
@@ -53,7 +53,7 @@
       <!-- IMAGEs-->
       {%for state in states_list%}
         {%for screenshot in state.imgsOfState%}
-          <img class="imgScreenshot" src="{% static screenshot.state_img_url %}">
+          <img class="imgScreenshot" src="{% url 'getImage' screenshot.state_img_url %}">
         {% endfor %}
       {% endfor %}
 
