@@ -71,17 +71,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'HookCatcherProj.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/1.10/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite3',
-    }
-}
-
-
 # Password validation
 # https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
 
@@ -119,3 +108,26 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# Load user settings. Need to at least set DATABASE_DIR
+try:
+    execfile(os.path.join(BASE_DIR, "user_settings.py"), globals(), locals())
+except IOError:
+    pass
+
+
+
+# Database
+# https://docs.djangoproject.com/en/1.10/ref/settings/#databases
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(DATABASE_DIR, 'db.sqlite3'),
+    }
+}
+
+
+
+
