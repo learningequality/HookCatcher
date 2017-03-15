@@ -10,11 +10,10 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import State
 
-URL_BASE = 'https://github.com/MingDai/kolibri/pull/6/commits/'
+GITHUB_PR_URL = 'https://github.com/MingDai/kolibri/pull/6/commits/'
 
 
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')  # assume an img folder in database
-print(IMG_DATABASE_DIR)
 
 
 # must import models and save to models
@@ -74,7 +73,7 @@ def stateRepresentation(stateObj):
         'desc': stateObj.state_desc,
         'gitType': stateObj.git_source_type,
         'gitName': stateObj.git_source_name,
-        'gitCommitURL': URL_BASE + stateObj.git_commit,
+        'gitCommitURL': GITHUB_PR_URL + stateObj.git_commit,
         'imgsOfState': stateObj.image_set.all()
     }
 
@@ -106,9 +105,9 @@ def singlePR(request, prNumber):
 # retrieve the data of a specific image from data directory
 def getImage(request, imageID):
     print('IMAGEEE' + imageID)
-    image_dir = os.path.join(IMG_DATABASE_DIR, imageID)
-    image_data = open(image_dir, "rb").read()
-    return HttpResponse(image_data, content_type="image/png")
+    imageDir = os.path.join(IMG_DATABASE_DIR, imageID)
+    imageData = open(imageDir, "rb").read()
+    return HttpResponse(imageData, content_type="image/png")
 
 
 # retrieve all states from State model
