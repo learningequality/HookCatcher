@@ -1,3 +1,5 @@
 .DS_STORE
-my_settings.*
 *.pyc
+
+user_settings.py
+
