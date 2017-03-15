@@ -12,8 +12,8 @@ var imgHeight = "768";
 
 
 //Shell command: phantomjs capture.js <url> <imgName> <imageWidth> <imageHeight>
-//!!!Need to change back to 2	
-if(args.length > 0) //need to provie at least screenshot URL,and  name of the screenshot to be saved as 
+//!!!Need to change back to 2
+if(args.length > 0) //need to provie at least screenshot URL,and  name of the screenshot to be saved as
 {
 	var i;
 	for(i = 1; i < args.length; i++)
@@ -47,7 +47,7 @@ if(args.length > 0) //need to provie at least screenshot URL,and  name of the sc
 	    trace.forEach(function(t) {
 	      msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function +'")' : ''));
 	    });
-	  }	
+	  }
 
 	  console.error(msgStack.join('\n'));
 
