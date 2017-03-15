@@ -3,6 +3,7 @@
 # import sh
 import os
 
+from django.conf import settings  # database dir
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -10,12 +11,10 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import State
 
 URL_BASE = 'https://github.com/MingDai/kolibri/pull/6/commits/'
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-DATA_BASE = 'HookCatcherData'   # name of folder with data
-DATABASE_DIR = os.path.join(os.path.dirname(BASE_DIR), DATA_BASE)
-IMG_DATABASE_DIR = os.path.join(DATABASE_DIR, 'img')
+IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')  # assume an img folder in database
+print(IMG_DATABASE_DIR)
 
 
 # must import models and save to models
