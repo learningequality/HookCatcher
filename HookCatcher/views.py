@@ -51,7 +51,7 @@ def gitCommit(gitSHA):
         'Authorization': 'token ' + settings.GIT_OAUTH,
     }
 
-    gitRepoURL = os.path.join(settings.GIT_KOLIBRI_API, 'commits')
+    gitRepoURL = os.path.join(settings.GIT_REPO_API, 'commits')
     gitCommitURL = os.path.join(gitRepoURL, gitSHA)
     getCommit = requests.get(gitCommitURL, headers=headers)
 

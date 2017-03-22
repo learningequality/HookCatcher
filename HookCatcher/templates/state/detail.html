@@ -26,8 +26,8 @@
       </div>
       <div class="menuDetail">
         <div>
-          <p>{{ states_list|length }} Total States</p>
-          <p>{{gitCommit.filesChanged}} Files Changed</p>
+          <p>{{ states_list|length }} Total State{{ states_list|pluralize}}</p>
+          <p>{{gitCommit.filesChanged}} File{{ gitCommit.filesChanged|pluralize}} Changed</p>
         </div>
         <button class="menuButtons">Sort by Diff%</button>
         <button class="menuButtons">List View</button>
