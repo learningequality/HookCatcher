@@ -17,13 +17,17 @@
                 <h3>learningequality/kolibri</h3>
 
                 <div>
-                    {{state.gitType}} {{state.gitName}}<br>
-                    Build #2287: exercise-attempts progress
+                    <p>
+                      {{state.gitType}} {{state.gitName}}<br>
+                    </p>
                 </div>
+
+
+
             </div>
             <div class="menuDetail">
                 <p>
-                    {{ states_list|length }} total states
+                  {{ states_list|length }} Total States
                 </p>
 
                 <button class="menuButtons">
@@ -42,13 +46,11 @@
                 <tr class="listItem">
                     <td>
                         <h4>{{state.name}}
-                        <a href="{{state.gitType | lower}}/{{state.gitName}}">
+                        <a href="{{state.gitType | lower}}/{{state.gitName}}/{{state.gitCommitSHA}}">
                         {{state.gitType}} {{state.gitName}}</a></h4>
                         <p>{{state.desc}}</p>
                     </td>
-                    <td>
-                        <a href="{{state.gitCommitURL}}" class="git_commit_text">git commit: {{state.gitCommitURL}} </a>
-                    </td>
+
                 </tr>
                 {% endfor %}
             </table>
