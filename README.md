@@ -22,13 +22,12 @@ Add the local directory that your data is stored in:
 DATABASE_DIR = "../HookCatcherData"
 ```
 Add the Github Repository API that you are testing for:
-  For Example:
 ```python
-GIT_REPO_API = "https://api.github.com/repos/MingDai/kolibri/"
+GIT_REPO_API = "https://api.github.com/repos/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO/"
 ```
 Add your Github [personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
 ```python
-GIT_OAUTH = '756c39c9edbfd20c3c43b5fc6957bf1e446e0787'
+GIT_OAUTH = 'YOU_AUTH_ID_HERE'
 ```
 
 ### Start server
