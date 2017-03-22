@@ -17,14 +17,21 @@
       <div class="menuTitle">
         <h3>learningequality/kolibri</h3>
         <div>
-          {{gitType}} {{gitName}}<br>
-          Build #2287: exercise-attempts progress
+          <p>
+            {{gitType}} {{gitName}}<br>
+            Author: {{gitCommit.author}}<br>
+            Date: {{gitCommit.date}}
+          </p>
         </div>
       </div>
       <div class="menuDetail">
-        <p>{{ states_list|length }} total states</p>
+        <div>
+          <p>{{ states_list|length }} Total State{{ states_list|pluralize}}</p>
+          <p>{{gitCommit.filesChanged}} File{{ gitCommit.filesChanged|pluralize}} Changed</p>
+        </div>
         <button class="menuButtons">Sort by Diff%</button>
         <button class="menuButtons">List View</button>
+
       </div>
     </div>
 
@@ -44,7 +51,7 @@
               <p>{{state.desc}}</p>
             </td>
             <td>
-              <a href="{{state.gitCommitURL}}" class="git_commit_text">git commit: {{state.gitCommitURL}} </a>
+              <a href="{{gitCommit.url}}" class="git_commit_text">git commit: {{gitCommit.url}} </a>
             </td>
           </tr>
         {% endfor %}

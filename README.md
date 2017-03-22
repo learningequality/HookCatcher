@@ -15,12 +15,20 @@ $ pip install -r requirements.txt
 
 You'll need a directory for storing data. You can either start from scratch with an empty directory, or use an existing database and image set. See [this repo](https://github.com/MingDai/HookCatcherData) for example.
 
-To point at the data, create a new _user_settings.py_ file in the project root, and add:
+To point at the data, create a new _user_settings.py_ file in the project root.
+Add the local directory that your data is stored in:
 
 ```python
 DATABASE_DIR = "../HookCatcherData"
 ```
-
+Add the Github Repository API that you are testing for:
+```python
+GIT_REPO_API = "https://api.github.com/repos/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO/"
+```
+Add your Github [personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
+```python
+GIT_OAUTH = 'YOU_AUTH_ID_HERE'
+```
 
 ### Start server
 
