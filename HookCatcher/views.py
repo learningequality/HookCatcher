@@ -3,8 +3,8 @@
 # import sh
 import json
 import os
-
 import requests
+
 from django.conf import settings  # database dir
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -36,12 +36,12 @@ def stateRepresentation(stateObj):
 
 
 # only take the information needed from JSON response
-def gitRepresentation(gitJSON):
+def gitRepresentation(gitInfo):
     return {
-        'url': gitJSON['html_url'],
-        'author': gitJSON['commit']['author']['name'],
-        'date': gitJSON['commit']['author']['date'],
-        'filesChanged': len(gitJSON['files'])
+        'url': gitInfo['html_url'],
+        'author': gitInfo['commit']['author']['name'],
+        'date': gitInfo['commit']['author']['date'],
+        'filesChanged': len(gitInfo['files'])
     }
 
 
@@ -56,8 +56,8 @@ def gitCommit(gitSHA):
     getCommit = requests.get(gitCommitURL, headers=headers)
 
     if(getCommit.ok):
-        gitJSON = json.loads(getCommit.text)
-        return gitRepresentation(gitJSON)
+        gitJSONObj = json.loads(getCommit.text)
+        return gitRepresentation(gitJSONObj)
 
 
 # retrieve all states with a matching branch name
