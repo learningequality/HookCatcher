@@ -1,49 +1,71 @@
 import json
-import os
-
 import requests
-import yaml  # for parsing unicode json to strings
 from django.conf import settings  # database dir
 from django.core.management.base import BaseCommand, CommandError
 from HookCatcher.models import State
 
 STATES_FOLDER = 'states'  # folder within git repo that organizes the list of states
+
 # header of the git GET request
 GIT_HEADER = {
     'Authorization': 'token ' + settings.GIT_OAUTH,
 }
 
+# GIT_REPO_API example form "https://api.github.com/repos/MingDai/kolibri"
+GIT_REPO_API = 'https://api.github.com/repos/{0}'.format(settings.GIT_REPO)
 
-# function for accessing state JSON files and saving data into models
-def saveStates(gitBranch, gitPRnumber, gitCommit, gitSourceType):
-    # get the directory location of the states folder with the JSON states
-    gitContentURLtemp = os.path.join(settings.GIT_REPO_API, 'contents')
-    statesDir = STATES_FOLDER + '?ref=' + gitBranch
-    # example url https://api.github.com/repos/MingDai/kolibri/contents/states?ref=test-pr
-    gitContentURL = os.path.join(gitContentURLtemp, statesDir)
-    reqStatesDir = requests.get(gitContentURL, headers=GIT_HEADER)
-    jsonStatesDir = json.loads(reqStatesDir.text)
 
-    # save the json content for each file of the STATES_FOLDER
-    for eachState in jsonStatesDir:
-        # get the raw json file for each state
-        rawURL = eachState["download_url"]
-        reqRawState = requests.get(rawURL, headers=GIT_HEADER)
-        # save the json as a regular string rather than a unicode with yaml
-        jsonRawState = yaml.safe_load(reqRawState.text)
+# Pass in the information about the PR
+# access the state JSON files and saving data into models
+def saveStates(gitBranchName, gitPRnumber, gitCommit, gitSourceType):
+    # number of states that was saved for this commit
+    numStatesAdded = 0
 
-        if str(gitSourceType).upper() == 'PR':
-            gitSourceName = gitPRnumber
-        else:
-            gitSourceName = gitBranch
+    # get the directory of the states folder with the JSON states
+    statesDir = STATES_FOLDER + '?ref=' + gitCommit
+    # example url https://api.github.com/repos/MingDai/kolibri/contents/states?ref=COMMIT_SHA
+    gitContentURL = '{0}/contents/{1}'.format(GIT_REPO_API, statesDir)
+    reqStatesList = requests.get(gitContentURL, headers=GIT_HEADER)
 
-        s = State(state_name=jsonRawState['name'],
-                  state_desc=jsonRawState['description'],
-                  state_json=jsonRawState,
-                  git_source_type=gitSourceType,
-                  git_source_name=gitSourceName,
-                  git_commit=gitCommit)
-        s.save()
+    if (reqStatesList.status_code == 200):
+        statesList = json.loads(reqStatesList.text)
+        # if stateList = 0, then exit as well because there are no states to add
+        # if the states of this commit has already been added to database then don't add it again
+        if(State.objects.filter(git_commit=gitCommit).count() < len(statesList)):
+            # save the json content for each file of the STATES_FOLDER defined in user_settings
+            for eachState in statesList:
+                # get the raw json file for each state
+                rawURL = eachState["download_url"]
+                reqRawState = requests.get(rawURL, headers=GIT_HEADER)
+
+                if (reqRawState.status_code == 200):
+                    # save the json as a regular string rather than unicode using yaml
+                    rawState = json.loads(reqRawState.text)
+
+                    # is this a PR state or a branch state
+                    if str(gitSourceType).upper() == 'PR':
+                        gitSourceName = gitPRnumber
+                    else:
+                        gitSourceName = gitBranchName
+
+                    s = State(state_name=rawState['name'],
+                              state_desc=rawState['description'],
+                              state_json=rawState['url'],
+                              git_source_type=gitSourceType,
+                              git_source_name=gitSourceName,
+                              git_commit=gitCommit)
+                    print(s)
+                    # s.save()
+                    numStatesAdded += 1
+
+                else:
+                    print('There was no json files within the folder {0}'.format(STATES_FOLDER))
+        else:  # check for repeated commits make sure funciton is idempotent
+            print('The states of the commit in branch "{0}" have already been added'.format(gitBranchName))  # noqa: E501
+    else:
+        print('The folder "{0}" is not found in commit {1}'.format(STATES_FOLDER, gitCommit))
+
+    return numStatesAdded
 
 
 class Command(BaseCommand):
@@ -51,35 +73,39 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         # the Pull Request Number as argument
-        parser.add_argument('prNumber', nargs='+', type=int)
+        parser.add_argument('prNumber', type=int)
 
     def handle(self, *args, **options):
-        for prNumber in options['prNumber']:
-            try:
-                errorMessage = "Invalid input for PR number"
+        try:
+            errorMessage = "Invalid input for PR number"
 
-                # get the name of the head branch of the certain PR
-                gitPullURLtemp = os.path.join(settings.GIT_REPO_API, 'pulls')
-                gitPullURL = os.path.join(gitPullURLtemp, str(prNumber))
-                reqSpecificPR = requests.get(gitPullURL, headers=GIT_HEADER)
-                if (reqSpecificPR.ok):
-                    self.stdout.write(self.style.SUCCESS('Accessing "{0}"'.format(gitPullURL)))
-                    jsonSpecificPR = json.loads(reqSpecificPR.text)
+            prNumber = options['prNumber']
+            # get the information about a certain PR through Github API
+            gitPullURL = '{0}/pulls/{1}'.format(GIT_REPO_API, prNumber)
+            reqSpecificPR = requests.get(gitPullURL, headers=GIT_HEADER)
+            # make sure connection to Github API was successful
+            if (reqSpecificPR.status_code == 200):
+                self.stdout.write(self.style.SUCCESS('Accessing "{0}"'.format(gitPullURL)))
+                specificPR = json.loads(reqSpecificPR.text)
+                gitPRnumber = specificPR['number']
 
-                    gitPRnumber = jsonSpecificPR['number']
-                    # head of the Pull Request
-                    headBranchName = jsonSpecificPR['head']['ref']
-                    headCommitSHA = jsonSpecificPR['head']['sha']
+                # head of the Pull Request save branch name and commitSHA
+                headBranchName = specificPR['head']['ref']
+                headCommitSHA = specificPR['head']['sha']
 
-                    # Base of the Pull Request
-                    baseBranchName = jsonSpecificPR['base']['ref']
-                    baseCommitSHA = jsonSpecificPR['base']['sha']
+                # Base of Pull Request save branch name and the commitSHA
+                baseBranchName = specificPR['base']['ref']
+                baseCommitSHA = specificPR['base']['sha']
 
-                    # save the json state representations into the database
-                    saveStates(headBranchName, gitPRnumber, headCommitSHA, "PR")
-                    saveStates(baseBranchName, gitPRnumber, baseCommitSHA, "BRANCH")
+                print("Adding States: ")
+                numStatesAdded = 0  # counts the number of states that have been added to data
+                # save the json state representations into the database
+                numStatesAdded += saveStates(headBranchName, gitPRnumber, headCommitSHA, "PR")
+                numStatesAdded += saveStates(baseBranchName, gitPRnumber, baseCommitSHA, "BRANCH")
 
-                else:
-                    errorMessage = 'Could not retrieve PR {0} info from git repo'.format(prNumber)
-            except State.DoesNotExist:
-                raise CommandError(errorMessage)
+                print("Successfully saved {0} new states".format(numStatesAdded))
+
+            else:
+                errorMessage = 'Could not retrieve PR {0} info from git repo'.format(prNumber)
+        except State.DoesNotExist:
+            raise CommandError(errorMessage)
