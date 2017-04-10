@@ -1,6 +1,3 @@
-# import json
-# import requests
-# import sh
 import json
 import os
 import requests
@@ -11,9 +8,6 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import State
-
-GITHUB_PR_URL = 'https://github.com/MingDai/kolibri/pull/6/commits/'
-
 
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')  # assume an img folder in database
 
@@ -26,17 +20,18 @@ def index(request):
 # store all info about a state into one object
 def stateRepresentation(stateObj):
     return {
-        'name': stateObj.state_name,
-        'desc': stateObj.state_desc,
-        'gitType': stateObj.git_source_type,
-        'gitName': stateObj.git_source_name,
-        'gitCommitSHA': stateObj.git_commit[:7],
+        'name': stateObj.stateName,
+        'desc': stateObj.stateDesc,
+        'url': stateObj.stateUrl,
+        'gitRepo': stateObj.gitRepo,
+        'gitBranch': stateObj.gitBranch,
+        'gitCommitSHA': stateObj.gitCommit.gitHash[:7],
         'imgsOfState': stateObj.image_set.all()
     }
 
 
 # only take the information needed from JSON response
-def gitRepresentation(gitInfo):
+def gitCommitRepresentation(gitInfo):
     return {
         'url': gitInfo['html_url'],
         'author': gitInfo['commit']['author']['name'],
@@ -50,25 +45,24 @@ def gitCommit(gitSHA):
     headers = {
         'Authorization': 'token ' + settings.GIT_OAUTH,
     }
-
+    # ex. commit url = https://github.com/MingDai/kolibri/pull/6/commits/
     gitRepoURL = os.path.join(settings.GIT_REPO_API, 'commits')
     gitCommitURL = os.path.join(gitRepoURL, gitSHA)
     getCommit = requests.get(gitCommitURL, headers=headers)
 
-    if(getCommit.ok):
-        gitJSONObj = json.loads(getCommit.text)
-        return gitRepresentation(gitJSONObj)
+    if(getCommit.status_code == 200):
+        gitCommitObj = json.loads(getCommit.text)
+        return gitCommitRepresentation(gitCommitObj)
 
 
 # retrieve all states with a matching branch name
 def singleBranch(request, branchName, commitSHA):
-    branchStates = State.objects.filter(git_source_type='BRANCH')
-    allStates = branchStates.filter(git_source_name=branchName)
-    formattedStates = [stateRepresentation(state) for state in allStates]
+    branchStates = State.objects.filter(gitBranch=branchName)
+    formattedStates = [stateRepresentation(state) for state in branchStates]
 
     gitInfo = gitCommit(commitSHA)
     return render(request, 'state/detail.html', {
-        'states_list': formattedStates,
+        'statesList': formattedStates,
         'gitType': 'BRANCH',
         'gitName': branchName,
         'gitCommit': gitInfo,
@@ -83,7 +77,7 @@ def singlePR(request, prNumber, commitSHA):
 
     gitInfo = gitCommit(commitSHA)
     return render(request, 'state/detail.html', {
-        'states_list': formattedStates,
+        'statesList': formattedStates,
         'gitType': 'PR',
         'gitName': prNumber,
         'gitCommit': gitInfo,
@@ -92,7 +86,6 @@ def singlePR(request, prNumber, commitSHA):
 
 # retrieve the data of a specific image from data directory
 def getImage(request, imageID):
-    print('IMAGEEE' + imageID)
     imageDir = os.path.join(IMG_DATABASE_DIR, imageID)
     imageData = open(imageDir, "rb").read()
     return HttpResponse(imageData, content_type="image/png")
@@ -103,14 +96,5 @@ def allStates(request):
     allStates = State.objects.all()
     formattedStates = [stateRepresentation(state) for state in allStates]
     return render(request, 'state/index.html', {
-        'states_list': formattedStates,
+        'statesList': formattedStates,
     })
-
-
-'''
-def BSresponse(request):
-    if request.method == 'POST':
-        JSONbsReply = json.loads(request.body)
-        print 'Callback Reply: "%s"\n' % JSONbsReply
-    return render(request, 'BSresponse/index.html')
-'''

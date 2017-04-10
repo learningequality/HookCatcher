@@ -27,7 +27,7 @@
             </div>
             <div class="menuDetail">
                 <p>
-                  {{ states_list|length }} Total State{{ states_list|pluralize}}
+                  {{ statesList|length }} Total State{{ statesList|pluralize}}
                 </p>
 
                 <button class="menuButtons">
@@ -42,12 +42,12 @@
         <div class="listContainer">
             <h2> All States </h2>
             <table>
-                {%for state in states_list%}
+                {%for state in statesList%}
                 <tr class="listItem">
                     <td>
                         <h4>{{state.name}}
                         <a href="{{state.gitType | lower}}/{{state.gitName}}/{{state.gitCommitSHA}}">
-                        {{state.gitType}} {{state.gitName}}</a></h4>
+                        {{state.gitRepo}} {{state.gitBranch}}</a></h4>
                         <p>{{state.desc}}</p>
                     </td>
 

@@ -10,6 +10,6 @@ urlpatterns = [
         views.singleBranch, name='singleBranch'),
     url(r'^state/pr/(?P<prNumber>[1-9]+)/(?P<commitSHA>[a-zA-Z1-9]+)/$',
         views.singlePR, name='singlePR'),
-    url(r'^img/(?P<imageID>[a-zA-Z1-9_.-]+)/$',
+    url(r'^img/(?P<imageID>.*)/$',
         views.getImage, name='getImage'),
 ]

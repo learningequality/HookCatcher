@@ -11,7 +11,7 @@
 
 <body>
 
-  {% if states_list %}
+  {% if statesList %}
 
     <div class="menu">
       <div class="menuTitle">
@@ -26,7 +26,7 @@
       </div>
       <div class="menuDetail">
         <div>
-          <p>{{ states_list|length }} Total State{{ states_list|pluralize}}</p>
+          <p>{{ statesList|length }} Total State{{ statesList|pluralize}}</p>
           <p>{{gitCommit.filesChanged}} File{{ gitCommit.filesChanged|pluralize}} Changed</p>
         </div>
         <button class="menuButtons">Sort by Diff%</button>
@@ -39,11 +39,11 @@
 
       <h2>List of States in {{gitType}} {{gitName}}</h2>
       <table>
-        {%for state in states_list%}
+        {%for state in statesList%}
           <tr class="listItem">
             <td class="thumbnail">
               {%for screenshot in state.imgsOfState%}
-                <img src="{% url 'getImage' screenshot.state_img_url %}">
+                <img src="{% url 'getImage' screenshot.imgName %}">
               {% endfor %}
             </td>
             <td>
@@ -58,9 +58,9 @@
       </table>
 
       <!-- IMAGEs-->
-      {%for state in states_list%}
+      {%for state in statesList%}
         {%for screenshot in state.imgsOfState%}
-          <img class="imgScreenshot" src="{% url 'getImage' screenshot.state_img_url %}">
+          <img class="imgScreenshot" src="{% url 'getImage' screenshot.imgName %}">
         {% endfor %}
       {% endfor %}
 
