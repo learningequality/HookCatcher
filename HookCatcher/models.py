@@ -12,7 +12,7 @@ class Commit(models.Model):
     gitHash = models.CharField(max_length=200)
 
     def __str__(self):
-        return '%s' % (self.gitHash)
+        return 'Git Commit: %s' % (self.gitHash)
 
 
 @python_2_unicode_compatible
@@ -36,11 +36,15 @@ class PR(models.Model):
     gitRepo = models.CharField(max_length=200)
     gitPRNumber = models.IntegerField()
     # BASE of the git pull request Before version of state
-    gitTargetCommit = models.ForeignKey(Commit, related_name='asTargetPR',
+    # call state.gitCommit.targetCommit_set.all() to get PR's where state is used as a target
+    gitTargetCommit = models.ForeignKey(Commit, related_name='targetCommit_set',
                                         on_delete=models.CASCADE)
     # HEAD of the git pull request After version of state
-    gitSourceCommit = models.ForeignKey(Commit, related_name='asSourcePR',
+    gitSourceCommit = models.ForeignKey(Commit, related_name='sourceCommit_set',
                                         on_delete=models.CASCADE)
+    # add a commit hash of the merged version of the head and base
+    gitPRCommit = models.ForeignKey(Commit, null=True, related_name='prCommit_set',
+                                    on_delete=models.CASCADE)
 
     def __str__(self):
         return '%s: PR #%d' % (self.gitRepo, self.gitPRNumber)
@@ -66,10 +70,10 @@ class Image(models.Model):
 @python_2_unicode_compatible
 class Diff(models.Model):
     # GITHUB BASE of a PR (before state), many Diffs to one Image
-    targetImg = models.ForeignKey(Image, related_name='asTargetDiff',
+    targetImg = models.ForeignKey(Image, related_name='targetDiff_set',
                                   on_delete=models.CASCADE)
     # GITHUB HEAD of a PR (after state)
-    sourceImg = models.ForeignKey(Image, related_name='asSourceDiff',
+    sourceImg = models.ForeignKey(Image, related_name='sourceDiff_set',
                                   on_delete=models.CASCADE)
     diffImgName = models.CharField(max_length=200)
     diffPercent = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal('0.00'))

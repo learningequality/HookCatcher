@@ -22,13 +22,19 @@ Add the local directory that your data is stored in:
 DATABASE_DIR = "../HookCatcherData"
 ```
 Add the Github Repository that you are testing for:
-From example url: https://github.com/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO
+https://github.com/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO
 ```python
 GIT_REPO = "YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO"
 ```
+
 Add your Github [personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
 ```python
 GIT_OAUTH = 'YOU_AUTH_ID_HERE'
+```
+
+Add the name of the directory in the Git Repository that stores the state representation JSON files:
+```python
+STATES_FOLDER = 'NAME_OF_YOUR_STATES_FOLDER'
 ```
 
 ### Start server
