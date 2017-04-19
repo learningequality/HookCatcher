@@ -20,30 +20,32 @@ def genImages(stateObj):
 
     # generate the png screenshot a state per reesolution
     for resolution in IMG_RESOLUTIONS:
-
         # format the name of the screenshotted image
         imgName = '{0}_{1}_{2}x{3}.png'.format(stateObj.stateUUID,
                                                BROWSER_TYPE,  # {3}
                                                resolution[0],
                                                resolution[1])   # {5}
+        # indempotent check if this image is already generated don't do again
+        if (Image.objects.filter(imgName=imgName).count() < 1):
+            # take the screenshot and save png file to a directory
+            sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
+                         stateObj.stateUrl,  # url for screenshot
+                         '{0}/{1}'.format(IMG_DATABASE_DIR, imgName),  # img name
+                         resolution[0],  # width
+                         resolution[1])  # height
 
-        # take the screenshot and save png file to a directory
-        sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
-                     stateObj.stateUrl,  # url for screenshot
-                     '{0}/{1}'.format(IMG_DATABASE_DIR, imgName),  # img name
-                     resolution[0],  # width
-                     resolution[1])  # height
+            print('Generated image: {0}/{1}'.format(IMG_DATABASE_DIR, imgName))
+            numGenerated += 1
 
-        print('Generated image: {0}/{1}'.format(IMG_DATABASE_DIR, imgName))
-        numGenerated += 1
-
-        i = Image(imgName=imgName,
-                  browserType=BROWSER_TYPE,
-                  operatingSystem=OS,
-                  width=resolution[0],
-                  height=resolution[1],
-                  state=stateObj)
-        i.save()
+            i = Image(imgName=imgName,
+                      browserType=BROWSER_TYPE,
+                      operatingSystem=OS,
+                      width=resolution[0],
+                      height=resolution[1],
+                      state=stateObj)
+            i.save()
+        else:
+            print('Already had been generated: {0}'.format(imgName))
     return numGenerated
 
 
@@ -63,4 +65,4 @@ class Command(BaseCommand):
         except Commit.DoesNotExist:
             raise CommandError('Commit "%s" does not exist' % options['commitHash'])
 
-        self.stdout.write(self.style.SUCCESS('Successfully generated %d images' % numGenerated))
+        self.stdout.write(self.style.SUCCESS('Generated %d images' % numGenerated))
