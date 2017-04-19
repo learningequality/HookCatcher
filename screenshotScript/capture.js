@@ -53,7 +53,7 @@ if(args.length > 0) //need to provie at least screenshot URL,and  name of the sc
 
 	};
 
-	page.viewportSize = { width: 1024, height: 768 };
+	page.viewportSize = { width: imgWidth, height: imgHeight };
 	page.open(URL, function start(status) {
 
 		window.setTimeout(function(){

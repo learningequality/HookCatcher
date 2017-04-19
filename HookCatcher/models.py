@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import uuid
 from decimal import Decimal
 
 from django.db import models
@@ -17,6 +18,7 @@ class Commit(models.Model):
 
 @python_2_unicode_compatible
 class State(models.Model):
+    stateUUID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     stateName = models.CharField(max_length=200)
     stateDesc = models.TextField()
     stateUrl = models.TextField()
