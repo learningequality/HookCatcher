@@ -12,4 +12,5 @@ urlpatterns = [
         views.singlePR, name='singlePR'),
     url(r'^img/(?P<imageID>.*)/$',
         views.getImage, name='getImage'),
+    url(r'^webhook/$', views.webhook, name='webhook'),
 ]

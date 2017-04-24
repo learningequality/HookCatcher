@@ -67,13 +67,11 @@ def saveStates(gitRepoName, gitBranchName, gitCommitObj):
                                                  gitRepoName,
                                                  gitBranchName,
                                                  gitCommitObj)
-
         else:  # check for repeated commits make sure funciton is idempotent
-            print('The states of the commit in branch "{0}" have already been added'.format(gitBranchName))  # noqa: E501
+            print('States of commit "{0}" have already been added'.format(gitCommitObj.gitHash[:7]))  # noqa: E501
     else:
-        print('The folder "{0}" is not found in commit {1}'.format(STATES_FOLDER,
-                                                                   gitCommitObj.gitHash))
-
+        print('Folder "{0}" was not found in commit {1}'.format(STATES_FOLDER,
+                                                                gitCommitObj.gitHash[:7]))
     return numStatesAdded
 
 
@@ -83,6 +81,7 @@ def saveCommit(gitCommitSHA):
     if(Commit.objects.filter(gitHash=gitCommitSHA).count() <= 0):
         commitObj = Commit(gitHash=gitCommitSHA)
         commitObj.save()
+        print('Adding states of new commit "{0}"'.format(gitCommitSHA[:7]))
         return commitObj
     else:
         return Commit.objects.get(gitHash=gitCommitSHA)
@@ -124,33 +123,42 @@ class Command(BaseCommand):
                 baseBranchName = specificPR['base']['ref']
                 baseCommitObj = saveCommit(specificPR['base']['sha'])
 
-                print("Adding States: ")  # prompt user interface through terminal
                 numStatesAdded = 0  # counts the number of states that have been added to data
                 # save the json state representations into the database
                 numStatesAdded += saveStates(headRepoName, headBranchName, headCommitObj)
                 numStatesAdded += saveStates(baseRepoName, baseBranchName, baseCommitObj)
 
-                # save information into the PR model
+                # Add merged pr commit state into states table
+                # GITHUB API HAS NO MERGED_COMMIT_SHA WHEN FIRST OPENED
+                prCommitObj = None
+                # check if there is a hash for the merged commit of a pr
+                if(specificPR['merge_commit_sha']):
+                    prCommitObj = saveCommit(specificPR['merge_commit_sha'])
+
+                    # Merged PR commit use the repo that the PR will end up in (base)
+                    numStatesAdded += saveStates(baseRepoName, baseBranchName, prCommitObj)
+
                 gitPRNumber = specificPR['number']
-                prObject = PR(gitRepo=baseRepoName,
-                              gitPRNumber=gitPRNumber,
-                              gitTargetCommit=baseCommitObj,
-                              gitSourceCommit=headCommitObj)
-                prObject.save()
+                # Update an entry when the merged pr commit hash now exists on Git
+                if(PR.objects.filter(gitPRNumber=gitPRNumber).count() > 0):
+                    prObject = PR.objects.get(gitPRNumber=gitPRNumber)  # get existing pr entry
+                    # check if the pr commit is different from the previous
+                    if (prObject.gitPRCommit != prCommitObj):
+                        prObject.gitPRCommit = prCommitObj
+                        prObject.save()
+                        print("Successfully updated PR {0}".format(gitPRNumber))
 
-                '''
-                Add merged commit state into states table
-                GITHUB API HAS NO MERGED_COMMIT_SHA UNTIL AFTER THE PR HAS BEEN CLOSED
+                else:  # there is no merge_commit_sha for a newly opened PR
+                    # save information into the PR model
+                    prObject = PR(gitRepo=baseRepoName,
+                                  gitPRNumber=gitPRNumber,
+                                  gitTargetCommit=baseCommitObj,
+                                  gitSourceCommit=headCommitObj,
+                                  gitPRCommit=prCommitObj)
+                    prObject.save()
+                    print("Successfully added PR {0}".format(gitPRNumber))
 
-                # Commit Hash of the Pull Request itself a merged version of head and base
-                # The gitBRanch is the branch it will end up in after being merged(base)
-                prCommitSHA = specificPR['merge_commit_sha']
-
-                # Merged PR commit use the repo that the PR will end up in (base)
-                numStatesAdded += saveStates(baseRepoName, baseBranchName, prCommitSHA)
-                '''
-
-                print("Successfully saved {0} new states".format(numStatesAdded))
+                print("Saved {0} new states".format(numStatesAdded))
 
             else:
                 errorMessage = 'Could not retrieve PR {0} info from git repo'.format(prNumber)
