@@ -3,9 +3,11 @@ import os
 import requests
 
 from django.conf import settings  # database dir
+from django.core.management import call_command  # call newPR update command
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from .models import State
 
@@ -84,13 +86,6 @@ def singlePR(request, prNumber, commitSHA):
     })
 
 
-# retrieve the data of a specific image from data directory
-def getImage(request, imageID):
-    imageDir = os.path.join(IMG_DATABASE_DIR, imageID)
-    imageData = open(imageDir, "rb").read()
-    return HttpResponse(imageData, content_type="image/png")
-
-
 # retrieve all states from State model
 def allStates(request):
     allStates = State.objects.all()
@@ -98,3 +93,24 @@ def allStates(request):
     return render(request, 'state/index.html', {
         'statesList': formattedStates,
     })
+
+
+# retrieve the data of a specific image from data directory
+def getImage(request, imageID):
+    imageDir = os.path.join(IMG_DATABASE_DIR, imageID)
+    imageData = open(imageDir, "rb").read()
+    return HttpResponse(imageData, content_type="image/png")
+
+
+# run the new pr command when the webhook detects a PullRequestEvent
+@csrf_exempt
+@require_POST
+def webhook(request):
+    try:
+        payload = json.loads(request.body)
+        act = payload['action']
+        if(act == "opened" or act == "reopened" or act == "closed"):
+            call_command('newPRupdate', payload['number'])
+        return HttpResponse(status=200)
+    except:
+        return HttpResponse(status=500)
