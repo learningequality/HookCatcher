@@ -109,8 +109,9 @@ def webhook(request):
     try:
         payload = json.loads(request.body)
         act = payload['action']
-        if(act == "opened" or act == "reopened" or act == "closed"):
-            call_command('newPRupdate', payload['number'])
+        print('github action:', act)
+        if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
+            call_command('w', payload['number'])
         return HttpResponse(status=200)
     except:
         return HttpResponse(status=500)
