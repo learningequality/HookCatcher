@@ -54,13 +54,22 @@ class PR(models.Model):
 
 @python_2_unicode_compatible
 class Image(models.Model):
-    imgName = models.CharField(max_length=200)
     browserType = models.CharField(max_length=200)
     operatingSystem = models.CharField(max_length=200)
     width = models.IntegerField(null=True)      # int width of image
     height = models.IntegerField(null=True)     # int width of height
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
+
+    # calculate a unique imageName from other fields:
+    def getImageName(self):
+        # format the name of the screenshotted image
+        imgName = '{0}_{1}_{2}x{3}.png'.format(self.state.stateUUID,
+                                               self.browserType,  # {3}
+                                               self.height,
+                                               self.width)   # {5}
+        return imgName
+    imgName = property(getImageName)
 
     def __str__(self):
         return 'img_%s, %s:%s %s' % (self.state.stateName,
