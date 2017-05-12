@@ -1,0 +1,12 @@
+{
+    "setting": [
+        {
+            "resolution": [600,800],
+            "browser": "PhantomJs"
+        },
+        {
+            "resolution": [300,400],
+            "browser": "PhantomJs"
+        }
+    ]
+}

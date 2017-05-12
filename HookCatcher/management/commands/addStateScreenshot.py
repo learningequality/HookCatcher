@@ -1,8 +1,9 @@
 '''
-GOAL: Adds screenshot metadata information into models
-given: stateUUID,image Resolution, OS, Headless Browser
-return: add rows to the Image table about a particular screenshot
- '''
+GOAL: high level generate image for the screenshot of a state and add to Image table
+given: state UUID, config file [img resolution for screenshot, os, browser option]
+return: png image of screenshot of a state,
+        add a new image object to Image table
+'''
 from django.core.management.base import BaseCommand, CommandError
 from HookCatcher.models import Image, State
 
