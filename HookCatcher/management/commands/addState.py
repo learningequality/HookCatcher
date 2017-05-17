@@ -36,15 +36,15 @@ class Command(BaseCommand):
         parser.add_argument('gitCommitHash')
 
     def handle(self, *args, **options):
-        jsonPath = options['pathToJSONfile']
+        statePath = options['pathToJSONfile']
 
         # check if the path to the json is valid
-        if(os.path.exists(options['pathToJSONfile']) is True):
-            contents = json.loads(open(jsonPath, 'r').read())
+        if(os.path.exists(statePath) is True):
+            contents = json.loads(open(statePath, 'r').read())
 
         # if the user inputted a URL to the json instead of a local file
         else:
-            req = requests.get(jsonPath, headers=GIT_HEADER)
+            req = requests.get(statePath, headers=GIT_HEADER)
             if(req.status_code == 200):
                 contents = json.loads(req.text)
             else:

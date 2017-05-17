@@ -15,28 +15,25 @@ IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
 
 
 # retrieve the information of a single state and generate an image based on that
-def genImages(url, resTuple, browser):
+def genPhantom(url, config):
     # generate the specific headless browser screenshot
 
-    # check if there is the browser is a valid option
-    if (str(browser).lower() == 'phantomjs'):
-        # format the name of the screenshotted image
-        imgName = '{0}_{1}_{2}x{3}.png'.format(url,
-                                               browser,         # {3}
-                                               resTuple[0],
-                                               resTuple[1])   # {5}
+    res = config["resolution"]
+    # format the name of the screenshotted image
+    imgName = '{0}_{1}_{2}x{3}.png'.format(url,
+                                           'Phantom',         # {3}
+                                           res[0],
+                                           res[1])   # {5}
 
-        # take the screenshot and save png file to a directory
-        sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
-                     url,  # url for screenshot
-                     '{0}/{1}'.format(IMG_DATABASE_DIR, imgName),  # img name
-                     resTuple[0],  # width
-                     resTuple[1])  # height
+    # take the screenshot and save png file to a directory
+    sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
+                 url,  # url for screenshot
+                 '{0}/{1}'.format(IMG_DATABASE_DIR, imgName),  # img name
+                 res[0],  # width
+                 res[1])  # height
 
-        print('Generated image: {0}/{1}'.format(IMG_DATABASE_DIR, imgName))
+    print('Generated image: {0}/{1}'.format(IMG_DATABASE_DIR, imgName))
 
-    else:
-        print('No headless browser option named {0}'.format(browser))
     return
 
 
@@ -46,15 +43,17 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         # use state UUID for identification rather thatn commitHash, repo, branch, state names
         parser.add_argument('url')
-        parser.add_argument('--file', type=file)
+        parser.add_argument('configPath')
 
     def handle(self, *args, **options):
         url = options['url']
-        configFile = options['file']
+        configPath = options['configPath']
 
-        configList = json.load(configFile)
-        print configList
-        for config in configList['setting']:
-            genImages(url, config['resolution'], config['browser'])
+        if(os.path.exists(configPath) is True):
+            configFile = json.loads(open(configPath, 'r').read())
+            for config in configFile:
+                # check if there is the browser is a valid option
+                if (str(config["id"]).lower() == 'phantom'):
+                    genPhantom(url, config['config'])
 
         self.stdout.write(self.style.SUCCESS('Finished'))
