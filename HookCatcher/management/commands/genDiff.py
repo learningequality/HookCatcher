@@ -7,40 +7,30 @@ import os
 import sh
 
 from django.conf import settings  # database dir
-from django.core.management.base import BaseCommand
-
+from django.core.management.base import BaseCommand, CommandError
 # directory for storing images in the data folder
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
 
 
 # calls image magick on two images
-def imgMagickCompare(imgPath1, imgPath2):
-    # intialize a temp variable to save the path names
-    imgPath1temp = imgPath1
-    imgPath2temp = imgPath2
-
-    # parse out the parts of the image name related to directory paths for diff name
-    # that way there are no '/' characters that mess up the directory of the diff image
-    indx1 = imgPath1temp.find(IMG_DATABASE_DIR) + 1
-    indx2 = imgPath2temp.find(IMG_DATABASE_DIR) + 1
-    if (indx1 != -1):
-        imgPath1temp = imgPath1temp[(indx1 + len(IMG_DATABASE_DIR)):]
-        print(imgPath1temp)
-
-    if (indx2 != -1):
-        imgPath2temp = imgPath2temp[(indx2 + len(IMG_DATABASE_DIR)):]
-        print(imgPath2temp)
-
-    # name of the diff that concatenates the truncated version of both image names
-    imgDiffName = ('imgDIFF_{0}_{1}').format(imgPath1temp, imgPath2temp)
-    imgDiffName = os.path.join(IMG_DATABASE_DIR, imgDiffName)
+def imgMagickCompare(imgPath1, imgPath2, diffPath):
+    diffPercent = 0.00
     try:
+
+        if not os.path.exists(os.path.dirname(diffPath)):
+            os.makedirs(os.path.dirname(diffPath))
+
         # Diff screenshot name using whole path to reference images
-        sh.compare('-metric', 'PSNR', imgPath1, imgPath2, imgDiffName)
+        sh.compare('-metric', 'RMSE', imgPath1, imgPath2, diffPath)
+
     except sh.ErrorReturnCode_1, e:
-        diffPercent = float(e.stderr)
-        print diffPercent
-    return
+        diffOutput = e.stderr
+
+        # returns pixels and a % in () we only want the % ex: 25662.8 (0.39159)
+        idxPercent = diffOutput.index('(') + 1
+        diffPercent = diffOutput[idxPercent:len(diffOutput)-1]
+        print "Percent difference: " + diffPercent
+    return diffPercent
 
 
 class Command(BaseCommand):
@@ -51,17 +41,28 @@ class Command(BaseCommand):
         parser.add_argument('diffTool')
         parser.add_argument('imgPath1')
         parser.add_argument('imgPath2')
+        parser.add_argument('diffName')
 
     def handle(self, *args, **options):
         # Make sure these images exist in the image database
         diffTool = options['diffTool']
         imgPath1 = options['imgPath1']
         imgPath2 = options['imgPath2']
+        diffName = options['diffName']
 
-        if(str(diffTool).lower() == 'imagemagick'):
-            self.stdout.write(self.style.SUCCESS('Generating Diff...'))
-            imgMagickCompare(imgPath1, imgPath2)
+        if(os.path.exists(imgPath1) is True):
+            if(os.path.exists(imgPath2) is True):
+
+                if(str(diffTool).lower() == 'imagemagick'):
+                    print('Generating Diff...')
+                    diffPercent = imgMagickCompare(imgPath1, imgPath2, diffName)
+
+                    return diffPercent
+
+                else:
+                    raise CommandError('{0} is not an image diffing option'.format(diffTool))
+            else:
+                raise CommandError('The second image to be compared does not exist')
         else:
-            print('{0} is not an image diffing option'.format(diffTool))
-
+            raise CommandError('The first image to be compared does not exist')
         self.stdout.write(self.style.SUCCESS('Generated diff'))

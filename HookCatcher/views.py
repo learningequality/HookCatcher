@@ -111,7 +111,7 @@ def webhook(request):
         act = payload['action']
         print('github action:', act)
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
-            call_command('w', payload['number'])
+            call_command('webhookHandler', payload['number'])
         return HttpResponse(status=200)
     except:
         return HttpResponse(status=500)

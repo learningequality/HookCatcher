@@ -14,15 +14,24 @@ GIT_HEADER = {
 # Read a single json file that represents a state and save into models
 # save the commit object into the database
 def addState(rawState, gitRepoName, gitBranchName, gitCommitObj):
-    # get the raw json file for each state
-    s = State(stateName=rawState['name'],
-              stateDesc=rawState['description'],
-              stateUrl=rawState['url'],
-              gitRepo=gitRepoName,
-              gitBranch=gitBranchName,
-              gitCommit=gitCommitObj)
-    s.save()
-    print(s)
+    findState = State.objects.filter(stateName=rawState['name'],
+                                     stateDesc=rawState['description'],
+                                     stateUrl=rawState['url'],
+                                     gitRepo=gitRepoName,
+                                     gitBranch=gitBranchName,
+                                     gitCommit=gitCommitObj)
+
+    if (findState.count() < 1):
+        s = State(stateName=rawState['name'],
+                  stateDesc=rawState['description'],
+                  stateUrl=rawState['url'],
+                  gitRepo=gitRepoName,
+                  gitBranch=gitBranchName,
+                  gitCommit=gitCommitObj)
+        s.save()
+        return s
+    else:
+        return
 
 
 class Command(BaseCommand):
@@ -53,9 +62,19 @@ class Command(BaseCommand):
         # SUCEEDED in finding the file
 
         # get the commit object from the commit hash
-        commitObj = Commit(gitHash=options['gitCommitHash'])
-        commitObj.save()
-        addState(contents,
-                 options['gitRepo'],
-                 options['gitBranch'],
-                 commitObj)
+        if (Commit.objects.filter(gitHash=options['gitCommitHash']).count() > 0):
+            commitObj = Commit.objects.get(gitHash=options['gitCommitHash'])
+        else:
+            commitObj = Commit(gitHash=options['gitCommitHash'])
+            commitObj.save()
+
+        # get the state object from user input
+        s = addState(contents,
+                     options['gitRepo'],
+                     options['gitBranch'],
+                     commitObj)
+        # if a new state was added
+        if(s):
+            self.stdout.write(self.style.SUCCESS('Finished adding state: %s' % s))
+        else:
+            raise CommandError('The specified state already exists')
