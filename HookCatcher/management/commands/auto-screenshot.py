@@ -9,14 +9,14 @@ from django.core.management.base import BaseCommand
 from funcaddPRinfo import addPRinfo
 from funcaddScreenshots import addScreenshots
 
-KOLIBRI_DIR = path.abspath(settings.KOLIBRI_DIR)
+WORKING_DIR = path.abspath(settings.WORKING_DIR)
 
 
 def switchBranch(gitBranch):
-    kolibri_git_dir = path.abspath(path.join(KOLIBRI_DIR, '.git'))
+    working_git_dir = path.abspath(path.join(WORKING_DIR, '.git'))
 
-    sh.git('--git-dir', kolibri_git_dir, '--work-tree',
-           KOLIBRI_DIR, 'checkout', gitBranch)
+    sh.git('--git-dir', working_git_dir, '--work-tree',
+           WORKING_DIR, 'checkout', gitBranch)
 
 
 class Command(BaseCommand):
@@ -29,13 +29,12 @@ class Command(BaseCommand):
 
         # output the states that were added to the database
         savedStatesDict = addPRinfo(options['prNumber'])
-        screenshotConfig = settings.SCREENSHOT_CONFIG
 
         newImgDict = defaultdict(list)  # {'key': [ImgObj1>, <ImgObj2>], 'key2': [ImgObj1>, ...>]}
         for stateName in savedStatesDict:
             for state in savedStatesDict[stateName]:  # should only be two
                 switchBranch(state.gitBranch)
-                imgList = addScreenshots(state, screenshotConfig)
+                imgList = addScreenshots(state)
                 for i in imgList:
                     # key should proabbly also use stateName, but stateNames needs not change
                     key = "{0}{1}{2}{3}x{4}".format(i.state.stateUrl,

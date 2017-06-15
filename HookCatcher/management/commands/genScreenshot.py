@@ -48,13 +48,12 @@ class Command(BaseCommand):
         # use state UUID for identification rather thatn commitHash, repo, branch, state names
         parser.add_argument('url')
         parser.add_argument('imgName')
-        parser.add_argument('configPath')
 
     def handle(self, *args, **options):
         try:
             url = options['url']
             imgName = options['imgName']
-            configPath = options['configPath']
+            configPath = settings.SCREENSHOT_CONFIG
 
             if(os.path.exists(configPath) is True):
                 configFile = json.loads(open(configPath, 'r').read())
@@ -63,7 +62,8 @@ class Command(BaseCommand):
                     # check if there is the browser is a valid option
                     if (str(config["id"]).lower() == 'phantom'):
                         genPhantom(url, imgName, config['config'])
-
+            else:
+                raise CommandError("The screenshot config file defined in 'user_settings.py' doesn't exist!")  # noqa: E501
         except:
-                raise CommandError('Please provide all args for command: genScreenshot <Url> <Image Name> <Path to config file>')  # noqa: E501
+                raise CommandError('Please provide all args for command: genScreenshot <Url> <Image Name>')  # noqa: E501
         self.stdout.write(self.style.SUCCESS('Finished'))

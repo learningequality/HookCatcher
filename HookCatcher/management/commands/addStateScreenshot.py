@@ -14,7 +14,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         # use state UUID for identification rather thatn commitHash, repo, branch, state names
         parser.add_argument('stateUUID')
-        parser.add_argument('configPath')
 
     '''
     I chose not to call the genScreenshot command because I need the image object to be
@@ -24,7 +23,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             s = State.objects.get(stateUUID=options['stateUUID'])
-            configPath = options['configPath']
-            addScreenshots(s, configPath)
+            addScreenshots(s)
         except State.DoesNotExist:
             raise CommandError('State "%s" does not exist' % options['stateUUID'])

@@ -77,7 +77,8 @@ created first before to name the image of the screenshot in screenshot tool
 '''
 
 
-def addScreenshots(stateObj, configPath):
+def addScreenshots(stateObj):
+    configPath = settings.SCREENSHOT_CONFIG
     imgList = []
     if(os.path.exists(configPath) is True):
         configFile = json.loads(open(configPath, 'r').read())
