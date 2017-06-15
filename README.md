@@ -62,7 +62,7 @@ http://127.0.0.1:8000/
 ## Command Line Tools
 In the root of this directory utilize the following Django commands.
 
-### Generate screenshots and take an image diff of a Github Pull Request Number
+#### Generate screenshots and take Image Diffs of a Github Pull Request
 ```
 $ python manage.py auto-screenshot <Github Pull Request Number>
 ```
