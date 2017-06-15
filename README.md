@@ -1,4 +1,4 @@
-# Auto-Screenshot
+# Auto-Screenshots
 
 Generates perceptual diff of a git repository as you make pull requests.
 
