@@ -16,6 +16,7 @@ class Commit(models.Model):
         return 'Git Commit: %s' % (self.gitHash)
 
 
+# Fields that make a state unique: stateName, gitRepo, gitBranch, gitCommit
 @python_2_unicode_compatible
 class State(models.Model):
     stateUUID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -54,6 +55,7 @@ class PR(models.Model):
 
 @python_2_unicode_compatible
 class Image(models.Model):
+    imgName = models.CharField(max_length=200, unique=True)
     browserType = models.CharField(max_length=200)
     operatingSystem = models.CharField(max_length=200)
     width = models.IntegerField(null=True)      # int width of image
@@ -61,33 +63,20 @@ class Image(models.Model):
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 
-    # calculate a unique imageName from other fields:
-    def getImageName(self):
-        # format the name of the screenshotted image
-        imgName = '{0}_{1}_{2}x{3}.png'.format(self.state.stateUUID,
-                                               self.browserType,  # {3}
-                                               self.height,
-                                               self.width)   # {5}
-        return imgName
-    imgName = property(getImageName)
-
     def __str__(self):
-        return 'img_%s, %s:%s %s' % (self.state.stateName,
-                                     self.state.gitRepo,
-                                     self.state.gitBranch,
-                                     self.state.gitCommit.gitHash[:7])
+        return self.imgName
 
 
 @python_2_unicode_compatible
 class Diff(models.Model):
+    diffImgName = models.CharField(max_length=200, unique=True)
     # GITHUB BASE of a PR (before state), many Diffs to one Image
     targetImg = models.ForeignKey(Image, related_name='targetDiff_set',
                                   on_delete=models.CASCADE)
     # GITHUB HEAD of a PR (after state)
     sourceImg = models.ForeignKey(Image, related_name='sourceDiff_set',
                                   on_delete=models.CASCADE)
-    diffImgName = models.CharField(max_length=200)
-    diffPercent = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal('0.00'))
+    diffPercent = models.DecimalField(max_digits=6, decimal_places=5, default=Decimal('0.00'))
 
     def __str__(self):
-        return '%s DIFF %s' % (self.sourceImg, self.targetImg)
+        return self.diffImgName

@@ -1,0 +1,23 @@
+[
+    {
+        "id": "phantom",
+        "config": {
+            "resolution": [600,800]
+        }
+    },
+    {
+        "id": "phantom",
+        "config": {
+            "resolution": [300,400]
+        }
+    },
+    {
+        "id": "bs",
+        "config": {
+            "resolution": [1280,800],
+            "os": "Windows 7",
+            "browser": "Chrome 54"
+        }
+    }
+
+]
