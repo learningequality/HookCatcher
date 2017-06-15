@@ -37,7 +37,7 @@ def genPhantom(url, imgName, config):
                  res[1])  # height
 
     print('Generated image: {0}/{1}'.format(IMG_DATABASE_DIR, imgName))
-
+    sh.open('{0}/{1}'.format(IMG_DATABASE_DIR, imgName))
     return
 
 
