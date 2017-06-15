@@ -5,11 +5,10 @@ return: diff image between 2 screenshots of a state,
         add a new diff object to DIFF table
 '''
 import os
-from StringIO import StringIO
 
 from django.conf import settings  # database dir
-from django.core.management import call_command  # call genDiff command
 from django.core.management.base import BaseCommand, CommandError
+from funcgenDiff import genDiff
 from HookCatcher.models import Diff, Image
 
 # directory for storing images in the data folder
@@ -88,10 +87,8 @@ class Command(BaseCommand):
         imgPath2 = os.path.join(IMG_DATABASE_DIR, img2.imgName)
         diffName = os.path.join(IMG_DATABASE_DIR, getDiffImageName(img1, img2))
 
-        out = StringIO()
-        call_command('genDiff', diffTool, imgPath1, imgPath2, diffName, stdout=out)
+        percentDiff = genDiff(diffTool, imgPath1, imgPath2, diffName)
 
-        percentDiff = float(out.getvalue())
         newDiff = addDiffData(diffName, img1, img2, percentDiff)
 
         if(newDiff):
