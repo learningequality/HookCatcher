@@ -10,10 +10,10 @@ Generates perceptual diff of a git repository as you make pull requests.
 $ pip install -r requirements.txt
 ```
 
+### Initial setup and personal configurations
 
-### Reference data directory
+First, you'll need a directory for storing data. You can either start from scratch with an empty directory, or use an existing database and image set. See [this repo](https://github.com/MingDai/HookCatcherData) for example.
 
-You'll need a directory for storing data. You can either start from scratch with an empty directory, or use an existing database and image set. See [this repo](https://github.com/MingDai/HookCatcherData) for example.
 
 To point at the data, create a new _user_settings.py_ file in the project root.
 Add the local directory that your data is stored in:
@@ -21,6 +21,7 @@ Add the local directory that your data is stored in:
 ```python
 DATABASE_DIR = "../HookCatcherData"
 ```
+
 Add the Github Repository that you are testing for:
 https://github.com/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO
 ```python
@@ -42,7 +43,7 @@ Add the file path to the directory of the Github repo you are testing on:
 WORKING_DIR = 'PATH_TO_YOUR_WORKING_DIR'
 ```
 
-Add the screenshot configuration file to root of this directory. See [this file](https://github.com/MingDai/HookCatcher/blob/develop/config.json) for example:
+You need to set what tools and resolutions you want to take all your screenshots in. Add the screenshot configuration file to root of this directory. See [this file](https://github.com/MingDai/HookCatcher/blob/develop/config.json) for example:
 ```python
 SCREENSHOT_CONFIG = "NAME_OF_YOUR_CONFIG_FILE"
 ```
