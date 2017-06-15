@@ -17,7 +17,7 @@ def imgMagickCompare(imgPath1, imgPath2, diffPath):
     diffPercent = 0.00
     try:
 
-        if not os.path.exists(os.path.dirname(diffPath)):
+        if not os.path.exists(os.path.dirname(diffPath)) and os.path.dirname(diffPath) is not '':
             os.makedirs(os.path.dirname(diffPath))
 
         # Diff screenshot name using whole path to reference images
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 if(str(diffTool).lower() == 'imagemagick'):
                     print('Generating Diff...')
                     diffPercent = imgMagickCompare(imgPath1, imgPath2, diffName)
-
+                    sh.open(diffName)
                     return diffPercent
 
                 else:
