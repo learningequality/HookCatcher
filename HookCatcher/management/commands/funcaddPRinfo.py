@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import requests
 from django.conf import settings  # database dir
+from django.core.management.base import CommandError
 from HookCatcher.models import PR, Commit, State
 
 STATES_FOLDER = settings.STATES_FOLDER  # folder within git repo that organizes the list of states
@@ -38,7 +39,7 @@ def parseStateJSON(stateRepresentation, gitRepoName, gitBranchName, gitCommitObj
         return s
 
     else:
-        print('There was no json files within the folder {0}'.format(STATES_FOLDER))
+        CommandError('There was no json files within the folder {0}'.format(STATES_FOLDER))
 
     return None
 
@@ -70,10 +71,10 @@ def saveStates(gitRepoName, gitBranchName, gitCommitObj):
                                                    gitCommitObj))
         else:  # check for repeated commits make sure funciton is idempotent
 
-            print('States of commit "{0}" have already been added'.format(gitCommitObj.gitHash[:7]))  # noqa: E501
+            CommandError('States of commit "{0}" have already been added'.format(gitCommitObj.gitHash[:7]))  # noqa: E501
     else:
-        print('Folder "{0}" was not found in commit {1}'.format(STATES_FOLDER,
-                                                                gitCommitObj.gitHash[:7]))
+        CommandError('Folder "{0}" was not found in commit {1}'.format(STATES_FOLDER,
+                                                                       gitCommitObj.gitHash[:7]))
     return stateObjList
 
 
@@ -175,4 +176,4 @@ def addPRinfo(prNumber):
         return newStatesDict  # {'statename': (headObj, baseObj), 'statename1'...}
 
     else:
-        print('Could not retrieve PR {0} info from git repo'.format(prNumber))
+        CommandError('Could not retrieve PR {0} info from git repo'.format(prNumber))
