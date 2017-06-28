@@ -1,0 +1,91 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        {% load static %}
+        <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/style.css' %}"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+
+    <body>
+        <div class="menu">
+            <div class="menuTitle">
+                <h3>Base Repo: {{PR.gitTargetCommit.gitRepo}}</h3>
+            </div>
+
+
+            <div class="menuDetail">
+
+                <button class="menuButtons">
+                    Sort by Diff%
+                </button>
+
+                <div class="dropdown">
+                    <button onclick="toggleDropdown()" class="menuButtons btnDropdown">Change Resolutions</button>
+                    <div id="resDropdown" class="resDropdown">
+                        <a href="{% url 'singlePR' prNumber=PR.gitPRNumber %}">
+                            All
+                        </a>
+                        {% for res in resDictList %}
+                            <a href="{% url 'singlePR' prNumber=PR.gitPRNumber resWidth=res.width resHeight=res.height %}">
+                                {{res.width}}x{{res.height}}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button class="menuButtons">
+                    List View
+                </button>
+            </div>
+        </div>
+
+
+        <h1 class="contentHeader"><a href="{% url 'listPR' PR.gitTargetCommit.gitRepo %}"> Pull Request #{{PR.gitPRNumber}} </a></h1>
+
+        <div class="diffBody">
+        {% if diffDictList %}
+            {% for diffDict in diffDictList %}
+                <div class="diffContent">
+                    <h2>{{diffDict.stateName}}</h2>
+                    <div class="diffContainer">
+                        <div class="diffHalf">
+                            <p> {{PR.gitTargetCommit.gitRepo}} ({{PR.gitTargetCommit.gitBranch}}) </p>
+                            <img src="{% url 'getImage' diffDict.diffObj.targetImg.imgName %}">
+                        </div>
+                        <div class="diffHalf">
+                            <p> {{PR.gitSourceCommit.gitRepo}} ({{PR.gitSourceCommit.gitBranch}}) </p>
+                            <img src="{% url 'getImage' diffDict.diffObj.diffImgName %}" style="display:block" onclick="toggle(this)">
+                            <img src="{% url 'getImage' diffDict.diffObj.sourceImg.imgName %}" style="display:none" onclick="toggle(this)">
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No Diffs avaliable from this PR</p>
+        {% endif %}
+        </div>
+    </body>
+
+    <script type="text/javascript">
+        var toggle = function(img)
+        {
+            console.log('NEXT: ' + img.nextElementSibling);
+            if(img.nextElementSibling != null)
+            {
+                console.log(img.nextElementSibling);
+                img.style.display = 'none';
+                img.nextElementSibling.style.display = 'block';
+
+            }else
+            {
+                console.log(img.previousElementSibling);
+                img.previousElementSibling.style.display = 'block';
+                img.style.display = 'none';
+            }
+        }
+
+        function toggleDropdown()
+        {
+            document.getElementById("resDropdown").classList.toggle("show");
+        }
+    </script>
+</html>

@@ -19,7 +19,7 @@ GIT_REPO_API = 'https://api.github.com/repos/{0}'.format(settings.GIT_REPO)
 
 # Read a single json file that represents a state and save into models
 # save the commit object into the database
-def parseStateJSON(stateRepresentation, gitRepoName, gitBranchName, gitCommitObj):
+def parseStateJSON(stateRepresentation, gitCommitObj):
     # get the raw json file for each state
     rawURL = stateRepresentation["download_url"]
     reqRawState = requests.get(rawURL, headers=GIT_HEADER)
@@ -31,8 +31,6 @@ def parseStateJSON(stateRepresentation, gitRepoName, gitBranchName, gitCommitObj
         s = State(stateName=rawState['name'],
                   stateDesc=rawState['description'],
                   stateUrl=rawState['url'],
-                  gitRepo=gitRepoName,
-                  gitBranch=gitBranchName,
                   gitCommit=gitCommitObj)
         s.save()
         print('Adding State: {0}'.format(s))
@@ -46,7 +44,7 @@ def parseStateJSON(stateRepresentation, gitRepoName, gitBranchName, gitCommitObj
 
 # Pass in the information about the PR
 # Access the state JSON files and saving data into models
-def saveStates(gitRepoName, gitBranchName, gitCommitObj):
+def saveStates(gitCommitObj):
     # initialize list of state obj
     stateObjList = []
 
@@ -66,8 +64,6 @@ def saveStates(gitRepoName, gitBranchName, gitCommitObj):
             # save the json content for each file of the STATES_FOLDER defined in user_settings
             for eachState in gitStatesList:
                 stateObjList.append(parseStateJSON(eachState,
-                                                   gitRepoName,
-                                                   gitBranchName,
                                                    gitCommitObj))
         else:  # check for repeated commits make sure funciton is idempotent
 
@@ -79,15 +75,19 @@ def saveStates(gitRepoName, gitBranchName, gitCommitObj):
 
 
 # get a Commit Object using a Commit SHA from database
-def saveCommit(gitCommitSHA):
+def saveCommit(gitRepoName, gitBranchName, gitCommitSHA):
     # check if this commit is already in database
-    if(Commit.objects.filter(gitHash=gitCommitSHA).count() <= 0):
-        commitObj = Commit(gitHash=gitCommitSHA)
+    if(Commit.objects.filter(gitRepo=gitRepoName,
+                             gitBranch=gitBranchName,
+                             gitHash=gitCommitSHA).count() <= 0):
+        commitObj = Commit(gitRepo=gitRepoName, gitBranch=gitBranchName, gitHash=gitCommitSHA)
         commitObj.save()
         print('Adding states of new commit "{0}"'.format(gitCommitSHA[:7]))
         return commitObj
     else:
-        return Commit.objects.get(gitHash=gitCommitSHA)
+        return Commit.objects.get(gitRepo=gitRepoName,
+                                  gitBranch=gitBranchName,
+                                  gitHash=gitCommitSHA)
 
 
 def addPRinfo(prNumber):
@@ -102,7 +102,7 @@ def addPRinfo(prNumber):
         # Base of Pull Request save branch name and the commitSHA
         baseRepoName = specificPR['base']['repo']['full_name']
         baseBranchName = specificPR['base']['ref']
-        baseCommitObj = saveCommit(specificPR['base']['sha'])
+        baseCommitObj = saveCommit(baseRepoName, baseBranchName, specificPR['base']['sha'])
 
         '''
         NOTE: this will add a row to the Commit table even if there are no states
@@ -113,46 +113,39 @@ def addPRinfo(prNumber):
         # head of the Pull Request save branch name and commitSHA
         headRepoName = specificPR['head']['repo']['full_name']
         headBranchName = specificPR['head']['ref']
-        headCommitObj = saveCommit(specificPR['head']['sha'])
+        headCommitObj = saveCommit(headRepoName, headBranchName, specificPR['head']['sha'])
 
-        saveStates(baseRepoName, baseBranchName, baseCommitObj)
-        saveStates(headRepoName, headBranchName, headCommitObj)
+        saveStates(baseCommitObj)
+        saveStates(headCommitObj)
 
         # returns a dictionary of states that were added {'stateName1': (baseVers, headVers), ...}
         # this list is to be sent to screenshot generator to be taken screenshot of
         newStatesDict = defaultdict(list)
-
-        baseStatesList = State.objects.filter(gitRepo=baseRepoName,
-                                              gitBranch=baseBranchName,
-                                              gitCommit=baseCommitObj)
-
+        baseStatesList = State.objects.filter(gitCommit=baseCommitObj)
         # save the json state representations into the database and add added states to list
-        headStatesList = State.objects.filter(gitRepo=headRepoName,
-                                              gitBranch=headBranchName,
-                                              gitCommit=headCommitObj)
+        headStatesList = State.objects.filter(gitCommit=headCommitObj)
 
         # key is url because devs can make mistake of changing state name
         # if url changes betweeen state versions then need way of shared identifier
         for stateObjB in baseStatesList:
-            newStatesDict[stateObjB.stateUrl].append(stateObjB)
-
+            newStatesDict[stateObjB.stateName].append(stateObjB)
         for stateObjH in headStatesList:
-            # {'key' : baseStateObj, headStateObj, "key"}
-            newStatesDict[stateObjH.stateUrl].append(stateObjH)
+            # {'key' : baseStateObj, headStateObj, 'key': ...}
+            newStatesDict[stateObjH.stateName].append(stateObjH)
 
         # Add merged pr commit state into states table
         # GITHUB API HAS NO MERGED_COMMIT_SHA WHEN FIRST OPENED
         prCommitObj = None
         # check if there is a hash for the merged commit of a pr
         if(specificPR['merge_commit_sha']):
-            prCommitObj = saveCommit(specificPR['merge_commit_sha'])
-
+            prCommitObj = saveCommit(baseRepoName, baseBranchName, specificPR['merge_commit_sha'])
             # Merged PR commit use the repo that the PR will end up in (base)
             # not sure how to take screenshot of this so not included in saveStates List
-            saveStates(baseRepoName, baseBranchName, prCommitObj)
+            saveStates(prCommitObj)
 
         gitPRNumber = specificPR['number']
         # Update an entry when the merged pr commit hash now exists on Git
+        # PR already exists in database
         if(PR.objects.filter(gitPRNumber=gitPRNumber).count() > 0):
             prObject = PR.objects.get(gitPRNumber=gitPRNumber)  # get existing pr entry
             # check if the pr commit is different from the previous
@@ -167,7 +160,7 @@ def addPRinfo(prNumber):
                           gitPRNumber=gitPRNumber,
                           gitTargetCommit=baseCommitObj,
                           gitSourceCommit=headCommitObj,
-                          gitPRCommit=prCommitObj)
+                          gitPRCommit=prCommitObj)  # gitPRCommit == None
             prObject.save()
             print("Successfully added PR {0}".format(gitPRNumber))
 

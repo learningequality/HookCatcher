@@ -19,12 +19,14 @@ def getDiffImageName(imgObj1, imgObj2):
     # format the name of the diff image to be base(target) commit -> diffs -> head(source) commit
 
     # formula: (baseGitinfo)/diffs/(headGitInfo)/(imgMetadata).png
-    stateAndRepoBase = os.path.join(imgObj1.state.stateName, imgObj1.state.gitRepo)
-    branchAndCommitBase = os.path.join(imgObj1.state.gitBranch, imgObj1.state.gitCommit.gitHash[:7])
+    stateAndRepoBase = os.path.join(imgObj1.state.stateName, imgObj1.state.gitCommit.gitRepo)
+    branchAndCommitBase = os.path.join(imgObj1.state.gitCommit.gitBranch,
+                                       imgObj1.state.gitCommit.gitHash[:7])
     imgPathBase = os.path.join(stateAndRepoBase, branchAndCommitBase)
 
-    stateAndRepoHead = os.path.join(imgObj2.state.stateName, imgObj2.state.gitRepo)
-    branchAndCommitHead = os.path.join(imgObj2.state.gitBranch, imgObj2.state.gitCommit.gitHash[:7])
+    stateAndRepoHead = os.path.join(imgObj2.state.stateName, imgObj2.state.gitCommit.gitRepo)
+    branchAndCommitHead = os.path.join(imgObj2.state.gitCommit.gitBranch,
+                                       imgObj2.state.gitCommit.gitHash[:7])
     imgPathHead = os.path.join(stateAndRepoHead, branchAndCommitHead)
 
     diffPath = os.path.join(os.path.join(imgPathBase, 'diffs'), imgPathHead)
@@ -34,7 +36,6 @@ def getDiffImageName(imgObj1, imgObj2):
                                         imgObj1.height)
 
     diffCompletePath = os.path.join(diffPath, name)
-    print diffCompletePath
     return diffCompletePath
 
 
@@ -85,11 +86,16 @@ class Command(BaseCommand):
 
         imgPath1 = os.path.join(IMG_DATABASE_DIR, img1.imgName)
         imgPath2 = os.path.join(IMG_DATABASE_DIR, img2.imgName)
-        diffName = os.path.join(IMG_DATABASE_DIR, getDiffImageName(img1, img2))
+        diffName = getDiffImageName(img1, img2)
 
-        percentDiff = genDiff(diffTool, imgPath1, imgPath2, diffName)
+        if diffTool is 'imagemagick':
+            # call the function genDiff from funcgenDiff file
+            percentDiff = genDiff(diffTool,
+                                  imgPath1,
+                                  imgPath2,
+                                  os.path.join(IMG_DATABASE_DIR, diffName))
 
-        newDiff = addDiffData(diffName, img1, img2, percentDiff)
+            newDiff = addDiffData(diffName, img1, img2, percentDiff)
 
         if(newDiff):
             self.stdout.write(self.style.SUCCESS('Finished adding Diff: %s' % newDiff))

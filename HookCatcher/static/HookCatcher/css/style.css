@@ -2,6 +2,7 @@ html, body
 {
     width: 100%;
     height: 100%;
+    margin: 0;
 }
 
 div
@@ -12,6 +13,16 @@ div
 table, tr
 {
     width: 100%;
+}
+
+a
+{
+    color:#0077be;
+}
+
+a:visited
+{
+    color:#0077be;
 }
 
 .menu
@@ -40,9 +51,41 @@ table, tr
 
 }
 
+/* Dropdown Menu for resolutions */
+.dropdown
+{
+    position: relative;
+    display: inline-block;
+}
+
+.resDropdown
+{
+    display: none;
+    position: absolute;
+    overflow: auto;
+    z-index: 1;
+
+    background-color: white;
+    border: 0.1rem solid black;
+}
+
+.resDropdown a
+{
+    text-decoration: none;
+    display: block;
+    padding: .5rem 1rem;
+}
+
+.show
+{
+    display: block;
+}
+
+
+/* List style for listing database info */
 .listContainer
 {
-    display: flex;  
+    display: flex;
     flex-wrap: wrap;
     margin: 0 auto;
     width: 80%;
@@ -61,14 +104,19 @@ table, tr
     text-align: left;
 }
 
-.listItem td:nth-child(2)  
+.listItem td:nth-child(2)
 {
     text-align: right;
 }
 
 .menuButtons
 {
-    padding: 0rem 1rem;
+    padding: 1rem 1rem;
+}
+
+.thumbnail img
+{
+    width: 10rem;
 }
 
 .git_commit_text
@@ -87,7 +135,59 @@ table, tr
     justify-content: center;
 }
 
-.thumbnail img
+/* diff.html related */
+
+.diffContent
 {
-    width: 10rem;
+
+}
+
+.diffContainer
+{
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-bottom: 5rem;
+}
+
+.diffHalf
+{
+    width: 49.9%;
+    display: block;
+}
+
+.diffHalf img
+{
+    width: 100%;
+    border: 1px solid black;
+}
+
+.diffHalf p
+{
+    width: 100%;
+    font-size: 1.25rem;
+    text-align: center;
+    margin: 0;
+    border: 1px solid black;
+}
+
+.diffBody{
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    width: 90%;
+    align-items: center;
+    justify-content: center;
+}
+
+.contentHeader
+{
+    width: 90%;
+    margin: auto;
+}
+
+.contentHeader a
+{
+    text-decoration: none;
 }

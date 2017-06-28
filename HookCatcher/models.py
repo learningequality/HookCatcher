@@ -10,10 +10,12 @@ from django.utils.encoding import python_2_unicode_compatible
 # Create your models here.
 @python_2_unicode_compatible
 class Commit(models.Model):
+    gitRepo = models.CharField(null=True, max_length=200)
+    gitBranch = models.CharField(null=True, max_length=200)
     gitHash = models.CharField(max_length=200)
 
     def __str__(self):
-        return 'Git Commit: %s' % (self.gitHash)
+        return '%s/%s %s' % (self.gitRepo, self.gitBranch, self.gitHash)
 
 
 # Fields that make a state unique: stateName, gitRepo, gitBranch, gitCommit
@@ -23,21 +25,19 @@ class State(models.Model):
     stateName = models.CharField(max_length=200)
     stateDesc = models.TextField()
     stateUrl = models.TextField()
-    gitRepo = models.CharField(max_length=200)
-    gitBranch = models.CharField(max_length=200)
     gitCommit = models.ForeignKey(Commit, on_delete=models.CASCADE)  # many commits for one state
 
     def __str__(self):
         return '%s, %s:%s %s' % (self.stateName,
-                                 self.gitRepo,
-                                 self.gitBranch,
+                                 self.gitCommit.gitRepo,
+                                 self.gitCommit.gitBranch,
                                  self.gitCommit.gitHash[:7])
 
 
 @python_2_unicode_compatible
 class PR(models.Model):
     gitRepo = models.CharField(max_length=200)
-    gitPRNumber = models.IntegerField()
+    gitPRNumber = models.IntegerField(unique=True)
     # BASE of the git pull request Before version of state
     # call state.gitCommit.targetCommit_set.all() to get PR's where state is used as a target
     gitTargetCommit = models.ForeignKey(Commit, related_name='targetCommit_set',
@@ -55,7 +55,7 @@ class PR(models.Model):
 
 @python_2_unicode_compatible
 class Image(models.Model):
-    imgName = models.CharField(max_length=200, unique=True)
+    imgName = models.CharField(max_length=200)
     browserType = models.CharField(max_length=200)
     operatingSystem = models.CharField(max_length=200)
     width = models.IntegerField(null=True)      # int width of image

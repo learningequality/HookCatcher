@@ -10,25 +10,14 @@
     </head>
 
     <body>
-        {% if statesList %}
+        {% if prList %}
 
         <div class="menu">
             <div class="menuTitle">
                 <h3>learningequality/kolibri</h3>
-
-                <div>
-                    <p>
-                      {{state.gitType}} {{state.gitName}}<br>
-                    </p>
-                </div>
-
-
-
             </div>
+
             <div class="menuDetail">
-                <p>
-                  {{ statesList|length }} Total State{{ statesList|pluralize}}
-                </p>
 
                 <button class="menuButtons">
                     Sort by Diff%
@@ -40,15 +29,17 @@
             </div>
         </div>
         <div class="listContainer">
-            <h2> All States </h2>
+            <h2> {{ prList|length }} Total Pull Request{{ prList|pluralize }} </h2>
             <table>
-                {%for state in statesList%}
+                {%for pr in prList%}
                 <tr class="listItem">
                     <td>
-                        <h4>{{state.name}}
-                        <a href="{% url 'singleCommit' gitCommitSHA=state.gitCommitSHA %}">
-                        {{state.gitRepo}} {{state.gitBranch}} {{state.gitCommitSHA}}</a></h4>
-                        <p>{{state.desc}}</p>
+                        <h4><a href="{% url 'singlePR' prNumber=pr.gitPRNumber %}">
+                        {{pr.gitRepo}} PR #{{pr.gitPRNumber}}</a></h4>
+                        <p>Base:{{pr.gitTargetCommit.gitRepo}}/{{pr.gitTargetCommit.gitRepo}}
+                        ,
+                        Head:{{pr.gitSourceCommit.gitRepo}}/{{pr.gitTargetCommit.gitRepo}}
+                        </p>
                     </td>
 
                 </tr>
@@ -56,7 +47,7 @@
             </table>
         </div>
         {% else %}
-            <p> There are no states in the the system</p>
+            <p> There are no Pull Requests store din the in the database</p>
         {% endif %}
     </body>
 </html>

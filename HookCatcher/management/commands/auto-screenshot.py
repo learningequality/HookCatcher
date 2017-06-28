@@ -30,6 +30,15 @@ class Command(BaseCommand):
         # output the states that were added to the database
         savedStatesDict = addPRinfo(options['prNumber'])
 
+        '''
+        this area is very brittle. It depends that there are states of equal names for both
+        the HEAD and BASE branches of the Pull Request. Exactly 2 states of equal names
+        There is no exception handling
+
+        It has no way of calling upon existing images if the state has already been added to
+        the system takes a screenshot everytime regardless
+        '''
+
         newImgDict = defaultdict(list)  # {'key': [ImgObj1>, <ImgObj2>], 'key2': [ImgObj1>, ...>]}
         for stateName in savedStatesDict:
             for state in savedStatesDict[stateName]:  # should only be two

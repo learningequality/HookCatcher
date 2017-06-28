@@ -1,5 +1,15 @@
 <html>
     <body>
-        This is the homepage
+        Following Git Repos:
+
+        {% if repoList %}
+          {% for repo in repoList %}
+            <a href="{% url 'listPR' repo.gitRepo %}">
+            {{repo.gitRepo}}</a>
+          {% endfor %}
+
+        {% else %}
+          There are no States added to the database
+        {% endif %}
     </body>
 </html>
