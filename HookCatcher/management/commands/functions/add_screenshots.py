@@ -18,8 +18,8 @@ IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
 
 def addImgData(browser, osys, imgWidth, imgHeight, stateObj):
     # generate an apporpriate namme for the
-    stateAndRepo = os.path.join(stateObj.stateName, stateObj.gitRepo)
-    branchAndCommit = os.path.join(stateObj.gitBranch, stateObj.gitCommit.gitHash[:7])
+    stateAndRepo = os.path.join(stateObj.stateName, stateObj.gitCommit.gitRepo)
+    branchAndCommit = os.path.join(stateObj.gitCommit.gitBranch, stateObj.gitCommit.gitHash[:7])
     imgPath = os.path.join(stateAndRepo, branchAndCommit)
 
     imgName = '{0}_{1}_{2}x{3}.png'.format(browser,  # {0}
@@ -35,13 +35,15 @@ def addImgData(browser, osys, imgWidth, imgHeight, stateObj):
                                             height=imgHeight,
                                             state=stateObj)
 
-    # if there was no duplicate found
+    # if there was a duplicate found
     if (findDuplicateImg.count() > 0):
         findDuplicateImg = findDuplicateImg.get()
         findDuplicateImg.imgName = imgCompletePath
+        findDuplicateImg.save()
         return findDuplicateImg
 
     else:
+        # no duplicate found
         imgObj = Image(imgName=imgCompletePath,
                        browserType=browser,
                        operatingSystem=osys,
@@ -58,12 +60,13 @@ def genPhantom(stateObj, config):
     res = config["resolution"]
     currOS = platform.system() + ' ' + platform.release()
 
+    # will always return a valid Image objecgt
     i = addImgData('PhantomJs', currOS, res[0], res[1], stateObj)
-    # take the screenshot and save png file to a directory
-    if (i):
+    # take the screenshot if no screenshot
+    if not os.path.exists(os.path.join(IMG_DATABASE_DIR, i.imgName)):
         sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
                      stateObj.stateUrl,  # url for screenshot
-                     '{0}/{1}'.format(IMG_DATABASE_DIR, i.imgName),  # img name
+                     os.path.join(IMG_DATABASE_DIR, i.imgName),  # img name
                      res[0],  # width
                      res[1])  # height
 
@@ -77,14 +80,15 @@ created first before to name the image of the screenshot in screenshot tool
 '''
 
 
-def addScreenshots(stateObj):
+def add_screenshots(stateObj):
     configPath = settings.SCREENSHOT_CONFIG
     imgList = []
     if(os.path.exists(configPath) is True):
-        configFile = json.loads(open(configPath, 'r').read())
-        for config in configFile:
-            # check if there is the browser is a valid option
-            if (str(config["id"]).lower() == 'phantom'):
-                i = genPhantom(stateObj, config['config'])
-                imgList.append(i)
+        with open(configPath, 'r') as c:
+            configFile = json.loads(c.read())
+            for config in configFile:
+                # check if there is the browser is a valid option
+                if (str(config["id"]).lower() == 'phantom'):
+                    i = genPhantom(stateObj, config['config'])
+                    imgList.append(i)
     return imgList

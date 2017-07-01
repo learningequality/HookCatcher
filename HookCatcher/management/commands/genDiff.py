@@ -4,7 +4,7 @@ given: two images PATHS, diff them with a method of choice
 return: diff image of two screenshots of a single state
 '''
 from django.core.management.base import BaseCommand
-from funcgenDiff import genDiff
+from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
 
 class Command(BaseCommand):
@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # call genDiff function
-        genDiff(options['diffTool'],
-                options['imgPath1'],
-                options['imgPath2'],
-                options['diffName'])
+        gen_diff(options['diffTool'],
+                 options['imgPath1'],
+                 options['imgPath2'],
+                 options['diffName'])

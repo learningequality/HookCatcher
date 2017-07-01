@@ -80,6 +80,7 @@ def listPR(request, gitRepo=""):
     prList = PR.objects.filter(gitRepo=gitRepo).order_by('-gitPRNumber')
     return render(request, 'compare/index.html', {
         'prList': prList,
+        'gitRepo': gitRepo
     })
 
 
@@ -219,9 +220,10 @@ def webhook(request):
     try:
         payload = json.loads(request.body)
         act = payload['action']
-        print('github action:', act)
+        print('github action: ', act)
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
-            call_command('auto-screenshot', payload['number'])
+            call_command('auto-screenshot', payload)
         return HttpResponse(status=200)
     except:
+        # github webhook error
         return HttpResponse(status=500)

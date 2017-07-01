@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from funcaddState import addState
+from HookCatcher.management.commands.functions.add_state import add_state
 
 
 class Command(BaseCommand):
@@ -13,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument('gitCommitHash')
 
     def handle(self, *args, **options):
-        addState(options['pathToJSONfile'],
-                 options['gitRepo'],
-                 options['gitBranch'],
-                 options['gitCommitHash'])
+        add_state(options['pathToJSONfile'],
+                  options['gitRepo'],
+                  options['gitBranch'],
+                  options['gitCommitHash'])

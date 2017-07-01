@@ -8,7 +8,7 @@ import os
 
 from django.conf import settings  # database dir
 from django.core.management.base import BaseCommand, CommandError
-from funcgenDiff import genDiff
+from HookCatcher.management.commands.functions.gen_diff import gen_diff
 from HookCatcher.models import Diff, Image
 
 # directory for storing images in the data folder
@@ -43,19 +43,13 @@ def addDiffData(diffImgName, imgObj1, imgObj2, diffPercent):
     # check if image already exists in data to prevent duplicates
     findDuplicateDiff = Diff.objects.filter(targetImg=imgObj1,
                                             sourceImg=imgObj2)
-
-    # if there was no duplicate found
+    # if there was a duplicate found, update percent and imageName
     if (findDuplicateDiff.count() > 0):
         findDuplicateDiff = findDuplicateDiff.get()
-        print('A diff between these two images already exists in the database')
-        user_input = raw_input("Overwrite the image? (y/n): ")
-        if(user_input == 'y'):
-            print('Overwriting...')
-            findDuplicateDiff.diffImgName = diffImgName
-            return findDuplicateDiff
-        else:
-            return
-
+        findDuplicateDiff.diffImgName = diffImgName
+        findDuplicateDiff.diffPercent = diffPercent
+        findDuplicateDiff.save()
+        return findDuplicateDiff
     else:
         diffObj = Diff(diffImgName=diffImgName,
                        targetImg=imgObj1,
@@ -81,23 +75,19 @@ class Command(BaseCommand):
             diffTool = options['diffTool']
             img1 = Image.objects.get(imgName=options['imgName1'])
             img2 = Image.objects.get(imgName=options['imgName2'])
-        except:
+        except Image.DoesNotExist:
             raise CommandError('At least one of the two images does not exist in the database')
 
         imgPath1 = os.path.join(IMG_DATABASE_DIR, img1.imgName)
         imgPath2 = os.path.join(IMG_DATABASE_DIR, img2.imgName)
         diffName = getDiffImageName(img1, img2)
 
-        if diffTool is 'imagemagick':
-            # call the function genDiff from funcgenDiff file
-            percentDiff = genDiff(diffTool,
-                                  imgPath1,
-                                  imgPath2,
-                                  os.path.join(IMG_DATABASE_DIR, diffName))
-
-            newDiff = addDiffData(diffName, img1, img2, percentDiff)
-
-        if(newDiff):
-            self.stdout.write(self.style.SUCCESS('Finished adding Diff: %s' % newDiff))
-        else:
-            raise CommandError('No new diff was added')
+        # call the function gen_diff from gen_diff file
+        percentDiff = gen_diff(diffTool,
+                               imgPath1,
+                               imgPath2,
+                               os.path.join(IMG_DATABASE_DIR, diffName))
+        # update database info only when a new diff has been generated
+        if percentDiff:
+            diffObj = addDiffData(diffName, img1, img2, percentDiff)
+            self.stdout.write(self.style.SUCCESS('Finished adding new Diff "{0}"'.format(diffObj)))

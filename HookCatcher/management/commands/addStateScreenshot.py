@@ -5,7 +5,8 @@ return: png image of screenshot of a state,
         add a new image object to Image table
 '''
 from django.core.management.base import BaseCommand, CommandError
-from funcaddScreenshots import addScreenshots
+from HookCatcher.management.commands.functions.add_screenshots import \
+  add_screenshots
 from HookCatcher.models import State
 
 
@@ -23,6 +24,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             s = State.objects.get(stateUUID=options['stateUUID'])
-            addScreenshots(s)
         except State.DoesNotExist:
             raise CommandError('State "%s" does not exist' % options['stateUUID'])
+        add_screenshots(s)

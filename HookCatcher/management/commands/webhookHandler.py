@@ -7,7 +7,7 @@ return: Inserts rows to the state model of all states related to the head and ba
  Insert information about a pull request to the PR table
 '''
 from django.core.management.base import BaseCommand
-from funcaddPRinfo import addPRinfo
+from HookCatcher.management.commands.functions.add_pr_info import add_pr_info
 
 
 class Command(BaseCommand):
@@ -19,4 +19,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         prNumber = options['prNumber']
-        addPRinfo(prNumber)
+        add_pr_info(prNumber)

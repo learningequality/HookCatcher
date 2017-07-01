@@ -7,22 +7,29 @@ import os
 import sh
 
 from django.conf import settings  # database dir
-from django.core.management.base import CommandError
 # directory for storing images in the data folder
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
 
 
 # calls image magick on two images
 def imgMagickCompare(imgPath1, imgPath2, diffPath):
-    diffPercent = 0.00
+    diffPercent = None
+    # create new folders if needed to generate this image
+    if not os.path.exists(os.path.dirname(diffPath)):
+        os.makedirs(os.path.dirname(diffPath))
+    # the DIff image file already exists so ask to override
+    elif os.path.exists(diffPath):
+        print('Diff image "{0}" already exists.'.format(diffPath))
+        user_input = raw_input("Overwrite the image? (y/n): ")
+        if(user_input == 'y'):
+            print('Overwriting...')
+        else:
+            # the user did not want to override the image
+            # don't run Imagemagick and don't update database
+            return None
     try:
-
-        if not os.path.exists(os.path.dirname(diffPath)):
-            os.makedirs(os.path.dirname(diffPath))
-
         # Diff screenshot name using whole path to reference images
         sh.compare('-metric', 'RMSE', imgPath1, imgPath2, diffPath)
-
     except sh.ErrorReturnCode_1, e:
         diffOutput = e.stderr
 
@@ -30,23 +37,21 @@ def imgMagickCompare(imgPath1, imgPath2, diffPath):
         idxPercent = diffOutput.index('(') + 1
         diffPercent = diffOutput[idxPercent:len(diffOutput)-1]
         print "Percent difference: " + diffPercent
+        pass
     return diffPercent
 
 
-def genDiff(diffTool, imgPath1, imgPath2, diffName):
+def gen_diff(diffTool, imgPath1, imgPath2, diffName):
     if(os.path.exists(imgPath1) is True):
         if(os.path.exists(imgPath2) is True):
 
             if(str(diffTool).lower() == 'imagemagick'):
-                print('Generating Diff...')
                 diffPercent = imgMagickCompare(imgPath1, imgPath2, diffName)
-
                 return diffPercent
-
             else:
-                raise CommandError('{0} is not an image diffing option'.format(diffTool))
+                print('{0} is not an image diffing option'.format(diffTool))
         else:
-            raise CommandError('The second image to be compared does not exist')
+            print('The second image: "{0}" to be compared does not exist'.format(imgPath2))
     else:
-        raise CommandError('The first image to be compared does not exist')
+        print ('The first image: "{0}"  to be compared does not exist'.format(imgPath1))
     print('Generated diff')
