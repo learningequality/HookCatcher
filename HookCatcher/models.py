@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import os
 import uuid
 from decimal import Decimal
 
@@ -10,73 +11,77 @@ from django.utils.encoding import python_2_unicode_compatible
 # Create your models here.
 @python_2_unicode_compatible
 class Commit(models.Model):
-    gitRepo = models.CharField(null=True, max_length=200)
-    gitBranch = models.CharField(null=True, max_length=200)
-    gitHash = models.CharField(max_length=200)
+    git_repo = models.CharField(max_length=200)
+    git_branch = models.CharField(max_length=200)
+    git_hash = models.CharField(unique=True, max_length=200)
 
     def __str__(self):
-        return '%s/%s %s' % (self.gitRepo, self.gitBranch, self.gitHash)
+        return '%s/%s %s' % (self.git_repo, self.git_branch, self.git_hash)
 
 
 # Fields that make a state unique: stateName, gitRepo, gitBranch, gitCommit
 @python_2_unicode_compatible
 class State(models.Model):
-    stateUUID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    stateName = models.CharField(max_length=200)
-    stateDesc = models.TextField()
-    stateUrl = models.TextField()
-    gitCommit = models.ForeignKey(Commit, on_delete=models.CASCADE)  # many commits for one state
+    state_uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    state_name = models.CharField(max_length=200)
+    state_desc = models.TextField()
+    state_url = models.TextField()
+    git_commit = models.ForeignKey(Commit, on_delete=models.CASCADE)  # many commits for one state
+
 
     def __str__(self):
-        return '%s, %s:%s %s' % (self.stateName,
-                                 self.gitCommit.gitRepo,
-                                 self.gitCommit.gitBranch,
-                                 self.gitCommit.gitHash[:7])
+        return '%s, %s:%s %s' % (self.state_name,
+                                 self.git_commit.git_repo,
+                                 self.git_commit.git_branch,
+                                 self.git_commit.git_hash[:7])
 
 
 @python_2_unicode_compatible
 class PR(models.Model):
-    gitRepo = models.CharField(max_length=200)
-    gitPRNumber = models.IntegerField(unique=True)
+    git_repo = models.CharField(max_length=200)
+    git_pr_number = models.IntegerField(unique=True)
     # BASE of the git pull request Before version of state
     # call state.gitCommit.targetCommit_set.all() to get PR's where state is used as a target
-    gitTargetCommit = models.ForeignKey(Commit, related_name='targetCommit_set',
-                                        on_delete=models.CASCADE)
+    git_target_commit = models.ForeignKey(Commit, related_name='target_commit_in_PR',
+                                          on_delete=models.CASCADE)
     # HEAD of the git pull request After version of state
-    gitSourceCommit = models.ForeignKey(Commit, related_name='sourceCommit_set',
-                                        on_delete=models.CASCADE)
+    git_source_commit = models.ForeignKey(Commit, related_name='source_commit_in_PR',
+                                          on_delete=models.CASCADE)
     # add a commit hash of the merged version of the head and base
-    gitPRCommit = models.ForeignKey(Commit, null=True, related_name='prCommit_set',
-                                    on_delete=models.CASCADE)
+    git_pr_commit = models.ForeignKey(Commit, null=True, related_name='merge_commit_in_PR',
+                                      on_delete=models.CASCADE)
+
 
     def __str__(self):
-        return '%s: PR #%d' % (self.gitRepo, self.gitPRNumber)
+        return '%s: PR #%d' % (self.git_repo, self.git_pr_number)
 
 
 @python_2_unicode_compatible
 class Image(models.Model):
-    imgName = models.CharField(max_length=200)
-    browserType = models.CharField(max_length=200)
-    operatingSystem = models.CharField(max_length=200)
-    width = models.IntegerField(null=True)      # int width of image
-    height = models.IntegerField(null=True)     # int width of height
+    img_file = models.ImageField(upload_to=os.path.join('media','img'), max_length=500)  # is the back slash here okay?
+    browser_type = models.CharField(max_length=200)
+    operating_system = models.CharField(max_length=200) 
+    device_res_width = models.IntegerField()
+    device_res_height = models.IntegerField()
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 
+
     def __str__(self):
-        return self.imgName
+        return self.img_file.name
 
 
 @python_2_unicode_compatible
 class Diff(models.Model):
-    diffImgName = models.CharField(max_length=200, unique=True)
+    diff_img_file = models.ImageField(upload_to=os.path.join('media','img'), max_length=500)
     # GITHUB BASE of a PR (before state), many Diffs to one Image
-    targetImg = models.ForeignKey(Image, related_name='targetDiff_set',
-                                  on_delete=models.CASCADE)
+    target_img = models.ForeignKey(Image, related_name='target_img_in_Diff',
+                                   on_delete=models.CASCADE)
     # GITHUB HEAD of a PR (after state)
-    sourceImg = models.ForeignKey(Image, related_name='sourceDiff_set',
-                                  on_delete=models.CASCADE)
-    diffPercent = models.DecimalField(max_digits=6, decimal_places=5, default=Decimal('0.00'))
+    source_img = models.ForeignKey(Image, related_name='source_img_in_Diff',
+                                   on_delete=models.CASCADE)
+    diff_percent = models.DecimalField(max_digits=6, decimal_places=5, default=0)
+
 
     def __str__(self):
-        return self.diffImgName
+        return self.diff_img_file.name

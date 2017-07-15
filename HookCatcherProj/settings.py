@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_rq',
+
 ]
 
 MIDDLEWARE = [
@@ -113,6 +115,10 @@ STATIC_URL = '/static/'
 # Load user settings. Need to at least set DATABASE_DIR
 try:
     execfile(os.path.join(BASE_DIR, "user_settings.py"), globals(), locals())
+except NameError:
+    with open(os.path.join(BASE_DIR, "user_settings.py")) as f:
+        code = compile(f.read(), os.path.join(BASE_DIR, "user_settings.py"), 'exec')
+        exec(code, globals(), locals())
 except IOError:
     pass
 
@@ -129,5 +135,21 @@ DATABASES = {
 }
 
 
-
-
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+        'PASSWORD': '',
+        'DEFAULT_TIMEOUT': 360,
+    },
+    'high': {
+        'URL': os.getenv('REDISTOGO_URL', 'redis://localhost:6379/0'), # If you're on Heroku
+        'DEFAULT_TIMEOUT': 500,
+    },
+    'low': {
+        'HOST': 'localhost',
+        'PORT': 6379,
+        'DB': 0,
+    },
+}

@@ -6,12 +6,14 @@ from .models import PR, Commit, Diff, Image, State
 
 # display the UUID field in the django admin
 class StateAdmin(admin.ModelAdmin):
-    readonly_fields = ('stateUUID',)
+    readonly_fields = ('state_uuid',)
 
 
 class ImageAdmin(admin.ModelAdmin):
-    readonly_fields = ('imgName',)
+    readonly_fields = ('img_file',)
 
+class DiffAdmin(admin.ModelAdmin):
+    readonly_fields = ('diff_img_file',)
 
 admin.site.register(State, StateAdmin)
 admin.site.register(Image, ImageAdmin)

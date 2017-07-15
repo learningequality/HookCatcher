@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import os
+import django
 import sys
 
 if __name__ == "__main__":
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "HookCatcherProj.settings")
+    django.setup()
     try:
         from django.core.management import execute_from_command_line
     except ImportError:
