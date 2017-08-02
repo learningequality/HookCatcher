@@ -6,18 +6,27 @@
         }
     },
     {
-        "id": "phantom",
+        "id": "chrome",
         "config": {
-            "resolution": [300,400]
+            "resolution": [375,667]
         }
     },
     {
-        "id": "bs",
+        "id": "chrome",
         "config": {
-            "resolution": [1280,800],
-            "os": "Windows 7",
-            "browser": "Chrome 54"
+            "resolution": [1200,1600]
+        }
+    },
+    {
+        "id": "browserstack",
+        "config": {
+            "desktop_resolution": [1024, 768],
+            "device_resolution": [2048, 1536],
+            "os":"android",
+            "os_version":"5.0",
+            "browser":"Android Browser",
+            "device":"Google Nexus 9",
+            "browser_version":null
         }
     }
-
 ]
