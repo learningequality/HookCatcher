@@ -58,7 +58,7 @@ class PR(models.Model):
 
 @python_2_unicode_compatible
 class Image(models.Model):
-    img_file = models.ImageField(upload_to=os.path.join('media','img'), max_length=500)  # is the back slash here okay?
+    img_file = models.ImageField(upload_to='img', max_length=2000, null=True, blank=True)
     browser_type = models.CharField(max_length=200)
     operating_system = models.CharField(max_length=200) 
     device_res_width = models.IntegerField()
@@ -68,12 +68,17 @@ class Image(models.Model):
 
 
     def __str__(self):
-        return self.img_file.name
+        # if the img_file doesn't exist and therefore has no file name, print so
+        if self.img_file == None or self.img_file.name == '':
+            # for the case when the image is not done loading yet
+            return 'Image File is Currently Processing...'
+        else:
+            return self.img_file.name
 
 
-@python_2_unicode_compatible
+@python_2_unicode_compatible 
 class Diff(models.Model):
-    diff_img_file = models.ImageField(upload_to=os.path.join('media','img'), max_length=500)
+    diff_img_file = models.ImageField(upload_to='img', max_length=2000, null=True, blank=True)
     # GITHUB BASE of a PR (before state), many Diffs to one Image
     target_img = models.ForeignKey(Image, related_name='target_img_in_Diff',
                                    on_delete=models.CASCADE)

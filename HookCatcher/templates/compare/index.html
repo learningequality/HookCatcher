@@ -34,11 +34,11 @@
                 {%for pr in prList%}
                 <tr class="listItem">
                     <td>
-                        <h4><a href="{% url 'singlePR' prNumber=pr.gitPRNumber %}">
-                        {{pr.gitRepo}} PR #{{pr.gitPRNumber}}</a></h4>
-                        <p>Base:{{pr.gitTargetCommit.gitRepo}}/{{pr.gitTargetCommit.gitRepo}}
+                        <h4><a href="{% url 'singlePR' pr_number=pr.git_pr_number %}">
+                        {{pr.git_repo}} PR #{{pr.git_pr_number}}</a></h4>
+                        <p>Base:{{pr.gitTargetCommit.gitRepo}}/{{pr.git_target_commit.git_repo}}
                         ,
-                        Head:{{pr.gitSourceCommit.gitRepo}}/{{pr.gitTargetCommit.gitRepo}}
+                        Head:{{pr.git_source_commit.git_repo}}/{{pr.git_target_commit.git_repo}}
                         </p>
                     </td>
 

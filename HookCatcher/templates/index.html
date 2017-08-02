@@ -4,8 +4,8 @@
 
         {% if repoList %}
           {% for repo in repoList %}
-            <a href="{% url 'listPR' repo.gitRepo %}">
-            {{repo.gitRepo}}</a>
+            <a href="{% url 'listPR' repo.git_repo %}">
+            {{repo.git_repo}}</a>
           {% endfor %}
 
         {% else %}

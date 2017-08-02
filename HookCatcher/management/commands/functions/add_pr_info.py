@@ -95,6 +95,7 @@ def add_pr_info(prnumber_payload):
     # function called: addPRinfo(prNumber)
     if isinstance(prnumber_payload, int):
         prNumber = prnumber_payload
+        # ex: https://api.github.com/repos/MingDai/kolibri/pulls/22
         # get the information about a certain PR through Github API using PR number
         gitPullURL = '{0}/pulls/{1}'.format(GIT_REPO_API, prNumber)
         reqSpecificPR = requests.get(gitPullURL, headers=GIT_HEADER)

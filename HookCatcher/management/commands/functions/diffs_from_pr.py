@@ -22,6 +22,8 @@ from HookCatcher.management.commands.functions.gen_diff import gen_diff
 from rq import Queue, Connection, Worker
 from redis import Redis
 
+from HookCatcher.models import Diff
+
 
 WORKING_DIR = path.abspath(settings.WORKING_DIR)
 
@@ -33,14 +35,20 @@ def switchBranch(gitBranch):
            WORKING_DIR, 'checkout', gitBranch)
 
 
+# Helper method to check if the image is currently loading or not. Return True if loaded
+def img_loaded(img_file):
+    return not img_file == None and not img_file.name == ''
+
+
 # parrallel processes for each stateName from here
         # input: A single stateName
         # Output: Screenshots for all states, All diffs possible
         # Edge: Can be 0 diffs generated 
 def generateFromState(stateName):
-    imgDict = defaultdict(list)  # {'key': [ImgObj1>, <ImgObj2>], 'key2': [...}
+    imgDict = defaultdict(list)  # {'key': [<ImgObj1>, <ImgObj2>], 'key2': [...}
     for singleState in stateName:  # should run two times
         # switchBranch(singleState.git_commit.git_branch) # depricate
+
         imgList = add_screenshots(singleState)
 
         for i in imgList:
@@ -51,38 +59,40 @@ def generateFromState(stateName):
                                             i.device_res_width,
                                             i.device_res_height)
             imgDict[key].append(i)
-        # if there are any images
-        if imgDict:
-            print ''  # separating delinate diffs from others
-            for imgPair in imgDict:
-                # the list associated to a key should be exactly 2 one for head one for branch
-                # else it is invalid for generating a diff
-                if len(imgDict[imgPair]) == 2:
+    # if there are any images
+    if imgDict: 
+        for imgPair in imgDict:
+            # the list associated to a key should be exactly 2 one for head one for branch
+            # else it is invalid for generating a diff
+            if len(imgDict[imgPair]) == 2:
+                if not img_loaded(imgDict[imgPair][0].img_file) or not img_loaded(imgDict[imgPair][1].img_file):
+                    print 'Creating a temporary Diff as we wait for the images to be generated...'
+                    temp_diff = Diff(target_img=imgDict[imgPair][0], source_img=imgDict[imgPair][1])
+                    temp_diff.save()
+                else:
                     gen_diff('imagemagick',
                              imgDict[imgPair][0].img_file.name,
                              imgDict[imgPair][1].img_file.name)
-                elif len(imgDict[imgPair]) == 1:
-                    print ('No Diff could be made. State "{0}" is defined for Branch "{1}" but not the opposing Branch. Please fix this.'.format(imgDict[imgPair][0].state.state_name,             # noqa: E501
-                                                                                                        imgDict[imgPair][0].state.git_commit.git_branch))  # noqa: E501
-                else:
-                    print ('No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.'.format(imgDict[imgPair][0].state.state_name,             # noqa: E501
-                                                                                                            imgDict[imgPair][0].state.git_commit.git_branch))  # noqa: E501
-        else:
-            print('There was no setting for which screenshots to generate, so none were generated')  # noqa: E501
-
+            elif len(imgDict[imgPair]) == 1:
+                print ('No Diff could be made. State "{0}" is defined for Branch "{1}" but not the opposing Branch. Please fix this.'.format(imgDict[imgPair][0].state.state_name,             # noqa: E501
+                                                                                                    imgDict[imgPair][0].state.git_commit.git_branch))  # noqa: E501
+            else:
+                print ('No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.'.format(imgDict[imgPair][0].state.state_name,             # noqa: E501
+                                                                                                      imgDict[imgPair][0].state.git_commit.git_branch))  # noqa: E501
+    else:
+        print('There was no setting for which screenshots to generate, so none were generated')  # noqa: E501
+    return
 
 # arguments can either be: int(prNumber) or dict(payload)
 def diffs_from_pr(prnumber_or_payload):
     start_time = time.time()
+    queue = django_rq.get_queue('default')
 
     # output the states that were added to the database
     savedStatesDict = add_pr_info(prnumber_or_payload)
     for stateName in savedStatesDict:
         # generateFromState(savedStatesDict[stateName])
-
-        queue = django_rq.get_queue('default')
-
         job = queue.enqueue(generateFromState, savedStatesDict[stateName])
-        print queue
+
     print('Completed all tasks')
     print("--- %s seconds ---" % (time.time() - start_time))

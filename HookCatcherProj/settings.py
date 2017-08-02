@@ -111,6 +111,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media').replace('\\', '/')
+
+MEDIA_URL = '/media/'
+
 
 # Load user settings. Need to at least set DATABASE_DIR
 try:
@@ -129,8 +133,12 @@ except IOError:
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(DATABASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'garnish_db',                      
+        'USER': 'garnish_user',
+        'PASSWORD': 'garnish',
+        'HOST': '127.0.0.1',
+        'PORT': '',
     }
 }
 

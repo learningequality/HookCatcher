@@ -6,13 +6,35 @@ return: diff image of two screenshots of a single state
 import os
 import sh
 import tempfile
+import requests
 
 from django.conf import settings  # database dir
 from django.core.management.base import CommandError
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
 from HookCatcher.models import Diff, Image
 
 # directory for storing images in the data folder
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
+
+# Helper function for creating the image path and then return if that file exists
+def img_exists(img_file_name):
+    # check if the file name is url or nah and see if that url is real
+    validator = URLValidator()
+    try:
+        validator(img_file_name)
+        return requests.get(img_file_name).status_code == 200
+    except ValidationError:
+        return os.path.exists(os.path.join(settings.MEDIA_ROOT, img_file_name))
+
+
+def is_url(img_file_name):
+    validator = URLValidator()
+    try:
+        validator(img_file_name)
+        return True
+    except ValidationError:
+        return False
 
 
 # generates the appropriate name for the new diff image
@@ -41,13 +63,13 @@ def getDiffImageName(img1, img2):
 
 # calls image magick on two images
 # saves the picture first into a temporary iamge and then 
-def imagemagick(img1, img2, diff_name, diff_obj):
+def imagemagick(img1_path, img2_path, diff_name, diff_obj):
     diff_percent = None    
 
     with tempfile.NamedTemporaryFile(suffix='.png') as temp_diff:
         try:
             # Diff screenshot name using whole path to reference images
-            sh.compare('-metric', 'RMSE', img1.img_file.name, img2.img_file.name, temp_diff.name)
+            sh.compare('-metric', 'RMSE', img1_path, img2_path, temp_diff.name)
         # imagemagick outputs the diff percentage in std.err, will run exception everytime
         except sh.ErrorReturnCode_1, e:
             diffOutput = e.stderr
@@ -60,14 +82,17 @@ def imagemagick(img1, img2, diff_name, diff_obj):
             if diff_percent:
                 diff_obj.diff_percent = diff_percent
             diff_obj.diff_img_file.save(diff_name, temp_diff, save=True)
-            print('Finished adding new Diff named: "{0}"'.format(diff_obj.diff_img_file.name))
+            print('Finished adding new Diff named: "{0}"'.format(os.path.join(settings.MEDIA_ROOT,
+                                                                              diff_obj.diff_img_file.name)))
     return diff_percent
 
 
 # responsible for checking if the images exist and generating the diff if th ydo 
 def validate_diff(diff_tool, img1, img2):
-    if(os.path.exists(img1.img_file.name) is True):
-        if(os.path.exists(img2.img_file.name) is True):
+    img1_path = os.path.join(settings.MEDIA_ROOT, img1.img_file.name) if not is_url(img1.img_file.name) else img1.img_file.name
+    img2_path = os.path.join(settings.MEDIA_ROOT, img2.img_file.name) if not is_url(img1.img_file.name) else img1.img_file.name
+    if(img_exists(img1.img_file.name) is True):
+        if(img_exists(img2.img_file.name) is True):
             # generate the name of the new Diff image
             diff_name = getDiffImageName(img1, img2)
 
@@ -76,10 +101,10 @@ def validate_diff(diff_tool, img1, img2):
                 duplicate_diff = Diff.objects.get(target_img=img1,
                                                   source_img=img2)
                 # see if the actual diff image exists, else create one
-                if not os.path.exists(duplicate_diff.diff_img_file.name):
+                if duplicate_diff.diff_img_file.name == '' or not os.path.exists(os.path.join(settings.MEDIA_ROOT, duplicate_diff.diff_img_file.name)):
                     if diff_tool == 'imagemagick':
                         # generate new diff, but make sure only one entry of the image is in model
-                        imagemagick(img1, img2, diff_name, duplicate_diff)
+                        imagemagick(img1_path, img2_path, diff_name, duplicate_diff)
                         return
                     else:
                         print('{0} is not an image diffing option'.format(diff_tool))
@@ -91,20 +116,21 @@ def validate_diff(diff_tool, img1, img2):
                                        target_img=img1,
                                        source_img=img2)
                 if diff_tool == 'imagemagick':
-                    imagemagick(img1, img2, diff_name, placeholer_diff)
+                    imagemagick(img1_path, img2_path, diff_name, placeholer_diff)
                     return
 
             # if this is reached, nothing happened no generated diff no added row to Diff
             return
         else:
-            print('The second image: "{0}" to be compared does not exist'.format(imgPath2))
+            print('The second image: "{0}" to be compared does not exist'.format(img2_path))
     else:
-        print ('The first image: "{0}"  to be compared does not exist'.format(imgPath1))
+        print ('The first image: "{0}"  to be compared does not exist'.format(img1_path))
 
 
 # most outfacing command that adds diff to the database models and generates the diff
 def gen_diff(diff_tool, img_name1, img_name2):
     try:
+        print 'img1:' + img_name1 + ' img2:' + img_name2
         # Make sure these images exist in the image database
         img1 = Image.objects.get(img_file=img_name1)  # target screenshot
         img2 = Image.objects.get(img_file=img_name2)  # source screenshot
@@ -116,3 +142,4 @@ def gen_diff(diff_tool, img_name1, img_name2):
         validate_diff(str(diff_tool).lower(), img1, img2)
     else:
         print('{0} is not an image diffing option'.format(diff_tool))
+    return

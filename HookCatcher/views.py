@@ -4,38 +4,92 @@ import os
 import requests
 from django.conf import settings  # database dir
 from django.core.management import call_command  # call newPR update command
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
 from .models import PR, Commit, Diff, Image, State
 
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')  # assume an img folder in database
 
+def is_url(img_file_name):
+    validator = URLValidator()
+    try:
+        validator(img_file_name)
+        return True
+    except ValidationError:
+        return False
+
+
+# representation for all the models so you don't have to change every value for models in every template
+def commit_representation(commit_obj):
+    return {
+        'git_repo': commit_obj.git_repo,
+        'git_branch': commit_obj.git_branch,
+        'git_hash': commit_obj.git_hash
+    }
+
 
 # store all info about a state into one object
-def stateRepresentation(stateObj):
+def state_representation(state_obj):
     return {
-        'name': stateObj.stateName,
-        'desc': stateObj.stateDesc,
-        'url': stateObj.stateUrl,
-        'gitRepo': stateObj.gitRepo,
-        'gitBranch': stateObj.gitBranch,
-        'gitCommitSHA': stateObj.gitCommit.gitHash,
-        'imgsOfState': stateObj.image_set.all()
+        'name': state_obj.state_name,
+        'desc': state_obj.state_desc,
+        'url': state_obj.state_url,
+        'git_repo': state_obj.git_commit.git_repo,
+        'git_branch': state_obj.git_commit.git_branch,
+        'git_commit_sha': state_obj.git_commit.git_hash,
+        'imgs_of_state': state_obj.image_set.all()
     }
 
+
+def pr_representation(pr_obj):
+    return {
+        'git_repo': pr_obj.git_repo,
+        'git_pr_number': pr_obj.git_pr_number,
+        'git_target_commit': commit_representation(pr_obj.git_target_commit),
+        'git_source_commit': commit_representation(pr_obj.git_source_commit),
+    }
+
+
+def image_representation(image_obj):
+    return {
+        'name': image_obj.img_file.name if is_url(image_obj.img_file.name) else os.path.join(settings.MEDIA_URL, image_obj.img_file.name),
+        'browser_type': image_obj.browser_type,
+        'operating_system': image_obj.operating_system,
+        'width': image_obj.device_res_width,
+        'height': image_obj.device_res_height,
+        'state': state_representation(image_obj.state)
+    }
+
+
+def diff_representation(diff_obj):
+    file_name = None
+    if diff_obj.diff_img_file.name:
+        if is_url(diff_obj.diff_img_file.name):
+            file_name = diff_obj.diff_img_file.name 
+        else:
+            file_name = os.path.join(settings.MEDIA_URL, diff_obj.diff_img_file.name)
+            
+    return { 
+        'name': file_name,
+        'target_img': image_representation(diff_obj.target_img),
+        'source_img': image_representation(diff_obj.source_img),
+        'diff_percent': diff_obj.diff_percent
+    }
 
 # only take the information needed from JSON response
-def gitCommitRepresentation(gitInfo):
+def gitCommitRepresentation(git_info):
     return {
-        'url': gitInfo['html_url'],
-        'author': gitInfo['commit']['author']['name'],
-        'date': gitInfo['commit']['author']['date'],
-        'filesChanged': len(gitInfo['files'])
+        'url': git_info['html_url'],
+        'author': git_info['commit']['author']['name'],
+        'date': git_info['commit']['author']['date'],
+        'filesChanged': len(git_info['files'])
     }
-
 
 # get request to github API
 def gitCommitInfo(gitSHA):
@@ -56,32 +110,34 @@ def gitCommitInfo(gitSHA):
 
 
 def index(request):
-    uniqueRepos = Commit.objects.order_by().values('gitRepo').distinct()
+    unique_repos = Commit.objects.order_by().values('git_repo').distinct()
     return render(request, 'index.html', {
-        'repoList': uniqueRepos,
+        'repoList': unique_repos,
     })
 
 
 # retrieve all states with a matching branch name
-def singleBranch(request, branchName, commitSHA):
-    branchStates = State.objects.filter(gitBranch=branchName)
-    formattedStates = [stateRepresentation(state) for state in branchStates]
+def singleBranch(request, branch_name, commitSHA):
+    branch_states = State.objects.filter(git_branch=branch_name)
+    formatted_states = [state_representation(state) for state in branch_states]
 
-    gitInfo = gitCommitInfo(commitSHA)
     return render(request, 'state/detail.html', {
-        'statesList': formattedStates,
+        'statesList': formatted_states,
         'gitType': 'BRANCH',
-        'gitName': branchName,
-        'gitCommit': gitInfo,
+        'gitName': branch_name,
+        'gitCommit': gitCommitInfo(commitSHA),
     })
 
 
-def listPR(request, gitRepo=""):
-    prList = PR.objects.filter(gitRepo=gitRepo).order_by('-gitPRNumber')
+def listPR(request, git_repo=""):
+    pr_list = PR.objects.filter(git_repo=git_repo).order_by('-git_pr_number')
     return render(request, 'compare/index.html', {
-        'prList': prList,
-        'gitRepo': gitRepo
+        'prList': pr_list,
+        'gitRepo': git_repo
     })
+
+
+
 
 
 def resDictionary(width, height):
@@ -91,94 +147,89 @@ def resDictionary(width, height):
     }
 
 
-def diffDictionary(stateName, diffObj):
-    return {
-        'stateName': stateName,
-        'diffObj': diffObj
-    }
+# return a dictionary {'state name': 'diff object'} of diffs using a head and base state.
+def get_diff_images(head_state, base_state, width, height):
+
+    # if no base state then
+        # return nothing
+    try:
+        # these queries should only return 1 unique Image
+        img_base_state = Image.objects.get(device_res_width=width,
+                                           device_res_height=height,
+                                           state=base_state)
+    except Image.DoesNotExist:
+        # the image for the base state is still processing or there is something wrong.
+        return
+
+
+    # if has base state and head state but no diff state
+        # when the head state is not done rendering so no diff has been calculated
+        # return a NEW diff object with a null diff image
+    # if has base state but no head state so no diff
+        # do the same as above 
+    try:
+        img_head_state = Image.objects.get(device_res_width=width,
+                                           device_res_height=height,
+                                           state=head_state)
+    except Image.DoesNotExist:
+        return {'state_name': base_state.state_name, 'diff_obj': None}
+
+    try:
+        diff_obj = Diff.objects.get(target_img=img_base_state, source_img=img_head_state)
+    except Diff.DoesNotExist:
+        diff_obj = Diff(diff_img_file=None,
+                        target_img=img_base_state, 
+                        source_img=img_head_state)
+        diff_obj.save()
+    return {'state_name': base_state.state_name, 'diff_obj': diff_representation(diff_obj)}
 
 
 # retrieve all states with a matching PR number
-def singlePR(request, prNumber, repoName="MingDai/kolibri", resWidth="0", resHeight="0"):
-    diffDictList = []  # final output of a list of diffs for the particular PR
-    listResDict = []  # final output of a list of dictionaries that represent resolutions
+def singlePR(request, pr_number, repo_name="MingDai/kolibri", res_width="0", res_height="0"):
+    diff_dict_list = []  # final output of a list of diffs for the particular PR
+    res_dict_list = []  # final output of a list of dictionaries that represent resolutions
 
-    PRobj = PR.objects.get(gitRepo=repoName, gitPRNumber=prNumber)
-    # bases the states on the base branch where the PR is located
-    # in case list of states for head and base is unique
-    baseStates = PRobj.gitTargetCommit.state_set.all()
+    PR_obj = PR.objects.get(git_repo=repo_name, git_pr_number=pr_number)
 
-    for baseState in baseStates:
-        # get the headState stateName should match that of the baseState
+    # get all the states associated to the base branch
+    for base_state in PR_obj.git_target_commit.state_set.all():
+        # get the complimentary head state object for the base state object
         try:
-            headState = State.objects.get(stateName=baseState.stateName,
-                                          gitCommit=PRobj.gitSourceCommit)
+            head_state = State.objects.get(state_name=base_state.state_name,
+                                           git_commit=PR_obj.git_source_commit)
         except:
-            print("Base State:{0} has no equivalent state in the Head of the PR".format(baseState.stateName))  # noqa: ignore=E501
+            print("Base State:{0} has no equivalent state in the Head of the PR".format(base_state.state_name))  # noqa: ignore=E501
+            continue  # the next steps all rely on existence of a head and a base state
 
-        # get a list of different resolution optoins avaliable for the particular PR
-        tempListResDict = []  # temporary list of resolutions to query images for particualr state
-        for img in Image.objects.filter(state=baseState):
-            newRes = resDictionary(img.width, img.height)
-            if newRes not in listResDict:
-                listResDict.append(newRes)
-            if newRes not in tempListResDict:
-                tempListResDict.append(newRes)
+        # get a list of the different resolutions avaliable for the particular PR
+        single_state_res_dict = []  # temporary list of resolutions to query images for particualr state
+        for img in Image.objects.filter(state=base_state):
+            new_res = {'width': img.device_res_width, 'height': img.device_res_height}
+            if new_res not in res_dict_list:
+                res_dict_list.append(new_res)
+            if new_res not in single_state_res_dict:
+                single_state_res_dict.append(new_res)
 
-        # check to see if a resolution was given for a single state. convert width and height to int
-        if (resWidth == "0" and resHeight == "0"):
+        # default when no resolution is specified, list all diffs convert width and height to int
+        if (res_width == "0" and res_height == "0"):
 
-            for uniqueRes in tempListResDict:
+            for unique_res in single_state_res_dict:
                 # get the specific image for this particular state and resolution
-                try:
-                    # these queries should only return 1 unique Image
-                    imgBaseState = Image.objects.get(width=uniqueRes['width'],
-                                                     height=uniqueRes['height'],
-                                                     state=baseState)
-
-                    imgHeadState = Image.objects.get(width=uniqueRes['width'],
-                                                     height=uniqueRes['height'],
-                                                     state=headState)
-
-                    diffObj = Diff.objects.get(targetImg=imgBaseState, sourceImg=imgHeadState)
-
-                    diffDict = diffDictionary(baseState.stateName, diffObj)
-                    diffDictList.append(diffDict)
-                except:
-                    # either there is no Image for the head or base
-                    # more than one Image for the head or base
-                    # more than 1 Diff or no Diff was found
-                    print("No diff for state {0} resolution {1}x{2}".format(baseState,
-                                                                            uniqueRes['width'],
-                                                                            uniqueRes['height']))
+                if get_diff_images(head_state, base_state, unique_res['width'], unique_res['height']):
+                    diff_dict_list.append(get_diff_images(head_state, 
+                                                          base_state, 
+                                                          unique_res['width'], 
+                                                          unique_res['height']))
         else:
-            # convert given resolutions from strings to int
-            resWidth = int(resWidth)
-            resHeight = int(resHeight)
-
-            # get the specific image for this particular state and resolution
-            try:
-                # these queries should only return 1 unique Image
-                imgBaseState = Image.objects.get(width=resWidth, height=resHeight, state=baseState)
-
-                imgHeadState = Image.objects.get(width=resWidth, height=resHeight, state=headState)
-
-                diffObj = Diff.objects.get(targetImg=imgBaseState, sourceImg=imgHeadState)
-
-                diffDict = diffDictionary(baseState.stateName, diffObj)
-                diffDictList.append(diffDict)
-            except:
-                # either there is no Image for the head or base
-                # more than one Image for the head or base
-                # more than 1 Diff or no Diff was found
-                print("There was no diff for state {0} in resolution {1}x{2}".format(baseState,
-                                                                                     resWidth,
-                                                                                     resHeight))
-
+            if get_diff_images(head_state, base_state, int(res_width), int(res_height)):
+                diff_dict_list.append(get_diff_images(head_state, 
+                                                      base_state, 
+                                                      int(res_width), 
+                                                      int(res_height)))
     return render(request, 'compare/diff.html', {
-        'PR': PRobj,
-        'diffDictList': diffDictList,
-        'resDictList': listResDict,
+        'PR': pr_representation(PR_obj),
+        'diff_dict_list': diff_dict_list,
+        'res_dict_list': res_dict_list,
     })
 
 
@@ -187,7 +238,7 @@ def singleCommit(request, gitCommitSHA):
     commitObj = Commit.objects.filter(gitHash=gitCommitSHA)
     states = State.objects.get(gitCommit=commitObj)
 
-    formattedStates = [stateRepresentation(state) for state in states]
+    formattedStates = [state_representation(state) for state in states]
 
     gitInfo = gitCommitInfo(commitObj.gitHash)
     return render(request, 'state/detail.html', {
@@ -199,18 +250,25 @@ def singleCommit(request, gitCommitSHA):
 # retrieve all states from State model
 def allStates(request):
     allStates = State.objects.all()
-    formattedStates = [stateRepresentation(state) for state in allStates]
+    formattedStates = [state_representation(state) for state in allStates]
     return render(request, 'state/index.html', {
         'statesList': formattedStates,
     })
 
 
 # retrieve the data of a specific image from data directory
-def getImage(request, imageID):
-    print("TRYING TO GET THIS IMAGE: {0}".format(imageID))
-    imageDir = os.path.join(IMG_DATABASE_DIR, imageID)
-    imageData = open(imageDir, "rb").read()
-    return HttpResponse(imageData, content_type="image/png")
+def getImage(request, image_name, is_diff): 
+    if is_diff == 'True':
+        print("TRYING TO GET THIS IMAGE: {0}. diff count: {1}".format(image_name, Diff.objects.filter(diff_img_file=image_name).count()))
+        # image_name needs to be full path including media/img
+        diffQuery = Diff.objects.get(diff_img_file=image_name)
+        imageData = diffQuery.img_file.open()
+    else:
+        print("TRYING TO GET THIS IMAGE: {0}. img count: {1}".format(image_name, Image.objects.filter(img_file=image_name).count()))
+        # image_name needs to be full path including media/img
+        imageQuery = Image.objects.get(img_file=image_name)
+        imageData = imageQuery.img_file.open()
+    return HttpResponse(imageData, mimetype="image/png")
 
 
 # run the new pr command when the webhook detects a PullRequestEvent
@@ -227,3 +285,34 @@ def webhook(request):
     except:
         # github webhook error
         return HttpResponse(status=500)
+
+# Helper method to check if the image is currently loading or not. Return True if loaded
+def img_loaded(img_file):
+    return not img_file == None and not img_file.name == ''
+
+@csrf_exempt
+@require_POST
+def browserstack_callback(request, img_id):
+    print img_id
+    try:
+        # get the payload from the callback
+        bs_payload = json.loads(request.body)
+        print("BROWSER STACK image completed rendering")
+    except Exception, e:
+        print(str(e))
+        return HttpResponse(status=500)
+
+    # get the image object that has currently null image file and supply it with the url of the image
+    img_obj = Image.objects.get(id=img_id)
+    img_obj.img_file = bs_payload['screenshots'][0]['image_url']
+    img_obj.save()
+
+    dependent_diffs = img_obj.target_img_in_Diff.all() | img_obj.source_img_in_Diff.all()
+    for diff in dependent_diffs:
+        if not img_loaded(diff.diff_img_file) and img_loaded(diff.target_img.img_file) and img_loaded(diff.source_img.img_file):
+            print 'Discovered new Diff to create'
+            gen_diff('imagemagick',
+                     diff.target_img.img_file.name,
+                     diff.source_img.img_file.name)
+    return HttpResponse(status=200)
+

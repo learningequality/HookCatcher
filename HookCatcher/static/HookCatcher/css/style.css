@@ -174,12 +174,13 @@ a:visited
 {
     width: 49.9%;
     display: block;
+    border: 1px solid black;
+
 }
 
 .diffHalf img
 {
     width: 100%;
-    border: 1px solid black;
 }
 
 .diffHalf p
@@ -211,4 +212,61 @@ a:visited
 }
 .collapseDiff + input:checked + .diffContainer{
   display:flex;
+}
+
+
+/* loading animation for unloaded images in diff */
+.loading-spinner {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 10px;
+  color: #996189;
+
+}
+
+.loading-spinner > div {
+  background-color: #333;
+  height: 10%;
+  width: 6px;
+  display: inline-block;
+  -webkit-animation: sk-stretchdelay 1.2s infinite ease-in-out;
+  animation: sk-stretchdelay 1.2s infinite ease-in-out;
+}
+
+.loading-spinner .loading-rect2 {
+  -webkit-animation-delay: -1.1s;
+  animation-delay: -1.1s;
+}
+
+.loading-spinner .loading-rect3 {
+  -webkit-animation-delay: -1.0s;
+  animation-delay: -1.0s;
+}
+
+.loading-spinner .loading-rect4 {
+  -webkit-animation-delay: -0.9s;
+  animation-delay: -0.9s;
+}
+
+.loading-spinner .loading-rect5 {
+  -webkit-animation-delay: -0.8s;
+  animation-delay: -0.8s;
+}
+
+@-webkit-keyframes sk-stretchdelay {
+  0%, 40%, 100% { -webkit-transform: scaleY(0.4) }  
+  20% { -webkit-transform: scaleY(1.0) }
+}
+
+@keyframes sk-stretchdelay {
+  0%, 40%, 100% { 
+    transform: scaleY(0.4);
+    -webkit-transform: scaleY(0.4);
+  }  20% { 
+    transform: scaleY(1.0);
+    -webkit-transform: scaleY(1.0);
+  }
 }
