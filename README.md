@@ -8,15 +8,15 @@ Generates perceptual diff of a git repository as you make pull requests.
 
 #### System Requirements
 Download and install the following:
-[Python 2](https://www.python.org/downloads/) w/ pip installed
-[Node](https://nodejs.org/en/) w/ npm installed
-[Redis](https://redis.io/)
-[PostgreSQL](https://www.postgresql.org/)
+[Python 2](https://www.python.org/downloads/) w/ pip installed<br />
+[Node](https://nodejs.org/en/) w/ npm installed<br />
+[Redis](https://redis.io/)<br />
+[PostgreSQL](https://www.postgresql.org/)<br />
   ```postgres
   CREATE DATABASE garnish_db
   CREATE USER garnish_user WITH LOGIN PASSWORD 'garnish'
   ```
-[PhantomJS](http://phantomjs.org/)
+[PhantomJS](http://phantomjs.org/)<br />
 
 #### Python Packages
 ```
