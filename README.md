@@ -21,7 +21,7 @@ Download and install the following:
 #### Python Packages
 ```
 $ pip install -r requirements.txt
-$ yarn installrm
+$ yarn install
 ```
 
 ### Initial setup and personal configurations
