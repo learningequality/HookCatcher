@@ -47,9 +47,6 @@ class PR(models.Model):
     # HEAD of the git pull request After version of state
     git_source_commit = models.ForeignKey(Commit, related_name='source_commit_in_PR',
                                           on_delete=models.CASCADE)
-    # add a commit hash of the merged version of the head and base
-    git_pr_commit = models.ForeignKey(Commit, null=True, related_name='merge_commit_in_PR',
-                                      on_delete=models.CASCADE)
 
 
     def __str__(self):
@@ -89,4 +86,8 @@ class Diff(models.Model):
 
 
     def __str__(self):
-        return self.diff_img_file.name
+        if self.diff_img_file == None or self.diff_img_file.name == '':
+            # for the case when the image is not done loading yet
+            return 'Diff is waiting on Images to Process...'
+        else:
+            return self.diff_img_file.name

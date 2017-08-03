@@ -128,9 +128,8 @@ def validate_diff(diff_tool, img1, img2):
 
 
 # most outfacing command that adds diff to the database models and generates the diff
-def gen_diff(diff_tool, img_name1, img_name2):
+def gen_diff(img_name1, img_name2, diff_tool='imagemagick'):
     try:
-        print 'img1:' + img_name1 + ' img2:' + img_name2
         # Make sure these images exist in the image database
         img1 = Image.objects.get(img_file=img_name1)  # target screenshot
         img2 = Image.objects.get(img_file=img_name2)  # source screenshot

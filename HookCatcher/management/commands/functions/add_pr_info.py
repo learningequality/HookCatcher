@@ -149,35 +149,18 @@ def add_pr_info(prnumber_payload):
         # {'key' : baseStateObj, headStateObj, 'key': ...}
         newStatesDict[stateObjH.state_name].append(stateObjH)
 
-    # Add merged pr commit state into states table
-    # GITHUB API HAS NO MERGED_COMMIT_SHA WHEN FIRST OPENED
-    prCommitObj = None
-    # check if there is a hash for the merged commit of a pr
-    if(specificPR['merge_commit_sha']):
-        prCommitObj = saveCommit(baseRepoName, baseBranchName, specificPR['merge_commit_sha'])
-        # Merged PR commit use the repo that the PR will end up in (base)
-        # not sure how to take screenshot of this so not included in saveStates List
-        saveStates(prCommitObj)
-
-    gitPRNumber = specificPR['number']
-    # Update an entry when the merged pr commit hash now exists on Git
-    # PR already exists in database
-    if(PR.objects.filter(git_pr_number=gitPRNumber).count() > 0):
-        prObject = PR.objects.get(git_pr_number=gitPRNumber)  # get existing pr entry
-        # check if the pr commit is different from the previous
-        if (prObject.git_pr_commit != prCommitObj):
-            prObject.git_pr_commit = prCommitObj
-            prObject.save()
-            print("Successfully updated PR {0}".format(gitPRNumber))
-
-    else:  # there is no merge_commit_sha for a newly opened PR
+    # if this PR doesn't exist in the database yet
+    if(PR.objects.filter(git_pr_number=specificPR['number']).count() > 0):
+        print('PR #{0} for Base Github Repo: "{1}/{2}" already exists'.format(specificPR['number'],
+                                                                              baseRepoName,
+                                                                              baseBranchName))
+    else:
         # save information into the PR model
         prObject = PR(git_repo=baseRepoName,
-                      git_pr_number=gitPRNumber,
+                      git_pr_number=specificPR['number'],
                       git_target_commit=baseCommitObj,
-                      git_source_commit=headCommitObj,
-                      git_pr_commit=prCommitObj)  # gitPRCommit == None
+                      git_source_commit=headCommitObj)
         prObject.save()
-        print("Successfully added PR {0}".format(gitPRNumber))
+        print("Successfully added PR {0}".format(specificPR['number']))
 
     return newStatesDict  # {'statename': (headObj, baseObj), 'statename1'...}

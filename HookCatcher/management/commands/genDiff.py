@@ -12,14 +12,12 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         # use state UUID for identification rather thatn commitHash, repo, branch, state names
-        parser.add_argument('diffTool')
         parser.add_argument('imgPath1')
         parser.add_argument('imgPath2')
         parser.add_argument('diffName')
 
     def handle(self, *args, **options):
         # call genDiff function
-        gen_diff(options['diffTool'],
-                 options['imgPath1'],
+        gen_diff(options['imgPath1'],
                  options['imgPath2'],
                  options['diffName'])

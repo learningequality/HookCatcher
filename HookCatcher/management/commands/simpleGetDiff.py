@@ -45,7 +45,7 @@ def imgMagickCompare(imgPath1, imgPath2, diffPath):
     return diffPercent
 
 
-def gen_diff(diffTool, imgPath1, imgPath2, diffName):
+def gen_diff(imgPath1, imgPath2, diffTool='imagemagick', diffName):
     if(os.path.exists(imgPath1) is True):
         if(os.path.exists(imgPath2) is True):
 
@@ -73,9 +73,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # call genDiff function
         print options['diffName']
-        diff_percent = gen_diff(options['diffTool'],
-                                options['imgPath1'],
+        diff_percent = gen_diff(options['imgPath1'],
                                 options['imgPath2'],
+                                options['diffTool'],
                                 options['diffName'])
         if diff_percent:
             print('Diff: "{0}" is {1} different'.format(options['diffName'], diff_percent))

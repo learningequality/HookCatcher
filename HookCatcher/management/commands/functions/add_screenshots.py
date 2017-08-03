@@ -17,9 +17,6 @@ from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from HookCatcher.models import Image
 
-
-from rq import Queue, Connection, Worker
-from redis import Redis
 import time
 import django_rq
 
@@ -242,8 +239,6 @@ def phantom(state_obj, config):
 # retrieve the information of a single state and generate an image based on that
 # this function should always return an image object no matter if a new one has been generated
 def gen_screenshot(state_obj, capture_tool, config):   
-    queue = django_rq.get_queue('default')
-
     if capture_tool=='phantom':
         # generate new phantom screenshot, but make sure only one entry of the image is in model
         return phantom(state_obj, config)
@@ -271,11 +266,8 @@ def add_screenshots(state_obj):
             queue = django_rq.get_queue('default')
 
             for config in config_file:
-                # image_obj = gen_screenshot(state_obj, config['id'], config['config'])
-                try:
-                    job = queue.enqueue(gen_screenshot, state_obj, config['id'], config['config'])
-                except TypeError:
-                    pass
+                # image_obj = gen_screenshot    (state_obj, config['id'], config['config'])
+                job = queue.enqueue(gen_screenshot, state_obj, config['id'], config['config'])
                 while not job.is_finished:
                     time.sleep(1)
                 image_obj = job.result

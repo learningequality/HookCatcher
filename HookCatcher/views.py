@@ -1,5 +1,6 @@
 import json
 import os
+import django_rq
 
 import requests
 from django.conf import settings  # database dir
@@ -293,7 +294,6 @@ def img_loaded(img_file):
 @csrf_exempt
 @require_POST
 def browserstack_callback(request, img_id):
-    print img_id
     try:
         # get the payload from the callback
         bs_payload = json.loads(request.body)
@@ -309,10 +309,13 @@ def browserstack_callback(request, img_id):
 
     dependent_diffs = img_obj.target_img_in_Diff.all() | img_obj.source_img_in_Diff.all()
     for diff in dependent_diffs:
-        if not img_loaded(diff.diff_img_file) and img_loaded(diff.target_img.img_file) and img_loaded(diff.source_img.img_file):
+        if (not img_loaded(diff.diff_img_file) and 
+            img_loaded(diff.target_img.img_file) and 
+            img_loaded(diff.source_img.img_file)):
+
             print 'Discovered new Diff to create'
-            gen_diff('imagemagick',
-                     diff.target_img.img_file.name,
-                     diff.source_img.img_file.name)
+            django_rq.get_queue('default').enqueue(gen_diff, 
+                                                   diff.target_img.img_file.name, 
+                                                   diff.source_img.img_file.name)
     return HttpResponse(status=200)
 
