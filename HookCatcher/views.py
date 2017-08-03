@@ -1,12 +1,12 @@
 import json
 import os
-import django_rq
 
+import django_rq
 import requests
 from django.conf import settings  # database dir
+from django.core.exceptions import ValidationError
 from django.core.management import call_command  # call newPR update command
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -17,6 +17,7 @@ from .models import PR, Commit, Diff, Image, State
 
 IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')  # assume an img folder in database
 
+
 def is_url(img_file_name):
     validator = URLValidator()
     try:
@@ -26,7 +27,7 @@ def is_url(img_file_name):
         return False
 
 
-# representation for all the models so you don't have to change every value for models in every template
+# representation for models so you don't have to change every value for models in every template
 def commit_representation(commit_obj):
     return {
         'git_repo': commit_obj.git_repo,
@@ -58,8 +59,12 @@ def pr_representation(pr_obj):
 
 
 def image_representation(image_obj):
+    if is_url(image_obj.img_file.name):
+        img_name = image_obj.img_file.name
+    else:
+        img_name = os.path.join(settings.MEDIA_URL, image_obj.img_file.name)
     return {
-        'name': image_obj.img_file.name if is_url(image_obj.img_file.name) else os.path.join(settings.MEDIA_URL, image_obj.img_file.name),
+        'name': img_name,
         'browser_type': image_obj.browser_type,
         'operating_system': image_obj.operating_system,
         'width': image_obj.device_res_width,
@@ -72,16 +77,17 @@ def diff_representation(diff_obj):
     file_name = None
     if diff_obj.diff_img_file.name:
         if is_url(diff_obj.diff_img_file.name):
-            file_name = diff_obj.diff_img_file.name 
+            file_name = diff_obj.diff_img_file.name
         else:
             file_name = os.path.join(settings.MEDIA_URL, diff_obj.diff_img_file.name)
-            
-    return { 
+
+    return {
         'name': file_name,
         'target_img': image_representation(diff_obj.target_img),
         'source_img': image_representation(diff_obj.source_img),
         'diff_percent': diff_obj.diff_percent
     }
+
 
 # only take the information needed from JSON response
 def gitCommitRepresentation(git_info):
@@ -91,6 +97,7 @@ def gitCommitRepresentation(git_info):
         'date': git_info['commit']['author']['date'],
         'filesChanged': len(git_info['files'])
     }
+
 
 # get request to github API
 def gitCommitInfo(gitSHA):
@@ -138,9 +145,6 @@ def listPR(request, git_repo=""):
     })
 
 
-
-
-
 def resDictionary(width, height):
     return {
         'width': width,
@@ -162,12 +166,11 @@ def get_diff_images(head_state, base_state, width, height):
         # the image for the base state is still processing or there is something wrong.
         return
 
-
     # if has base state and head state but no diff state
         # when the head state is not done rendering so no diff has been calculated
         # return a NEW diff object with a null diff image
     # if has base state but no head state so no diff
-        # do the same as above 
+        # do the same as above
     try:
         img_head_state = Image.objects.get(device_res_width=width,
                                            device_res_height=height,
@@ -179,7 +182,7 @@ def get_diff_images(head_state, base_state, width, height):
         diff_obj = Diff.objects.get(target_img=img_base_state, source_img=img_head_state)
     except Diff.DoesNotExist:
         diff_obj = Diff(diff_img_file=None,
-                        target_img=img_base_state, 
+                        target_img=img_base_state,
                         source_img=img_head_state)
         diff_obj.save()
     return {'state_name': base_state.state_name, 'diff_obj': diff_representation(diff_obj)}
@@ -203,7 +206,7 @@ def singlePR(request, pr_number, repo_name="MingDai/kolibri", res_width="0", res
             continue  # the next steps all rely on existence of a head and a base state
 
         # get a list of the different resolutions avaliable for the particular PR
-        single_state_res_dict = []  # temporary list of resolutions to query images for particualr state
+        single_state_res_dict = []  # temporary list of resolutions to query images of a state
         for img in Image.objects.filter(state=base_state):
             new_res = {'width': img.device_res_width, 'height': img.device_res_height}
             if new_res not in res_dict_list:
@@ -216,16 +219,19 @@ def singlePR(request, pr_number, repo_name="MingDai/kolibri", res_width="0", res
 
             for unique_res in single_state_res_dict:
                 # get the specific image for this particular state and resolution
-                if get_diff_images(head_state, base_state, unique_res['width'], unique_res['height']):
-                    diff_dict_list.append(get_diff_images(head_state, 
-                                                          base_state, 
-                                                          unique_res['width'], 
+                if get_diff_images(head_state,
+                                   base_state,
+                                   unique_res['width'],
+                                   unique_res['height']):
+                    diff_dict_list.append(get_diff_images(head_state,
+                                                          base_state,
+                                                          unique_res['width'],
                                                           unique_res['height']))
         else:
             if get_diff_images(head_state, base_state, int(res_width), int(res_height)):
-                diff_dict_list.append(get_diff_images(head_state, 
-                                                      base_state, 
-                                                      int(res_width), 
+                diff_dict_list.append(get_diff_images(head_state,
+                                                      base_state,
+                                                      int(res_width),
                                                       int(res_height)))
     return render(request, 'compare/diff.html', {
         'PR': pr_representation(PR_obj),
@@ -257,21 +263,6 @@ def allStates(request):
     })
 
 
-# retrieve the data of a specific image from data directory
-def getImage(request, image_name, is_diff): 
-    if is_diff == 'True':
-        print("TRYING TO GET THIS IMAGE: {0}. diff count: {1}".format(image_name, Diff.objects.filter(diff_img_file=image_name).count()))
-        # image_name needs to be full path including media/img
-        diffQuery = Diff.objects.get(diff_img_file=image_name)
-        imageData = diffQuery.img_file.open()
-    else:
-        print("TRYING TO GET THIS IMAGE: {0}. img count: {1}".format(image_name, Image.objects.filter(img_file=image_name).count()))
-        # image_name needs to be full path including media/img
-        imageQuery = Image.objects.get(img_file=image_name)
-        imageData = imageQuery.img_file.open()
-    return HttpResponse(imageData, mimetype="image/png")
-
-
 # run the new pr command when the webhook detects a PullRequestEvent
 @csrf_exempt
 @require_POST
@@ -287,9 +278,11 @@ def webhook(request):
         # github webhook error
         return HttpResponse(status=500)
 
+
 # Helper method to check if the image is currently loading or not. Return True if loaded
 def img_loaded(img_file):
-    return not img_file == None and not img_file.name == ''
+    return not img_file == None and not img_file.name == ''  # noqa: E711
+
 
 @csrf_exempt
 @require_POST
@@ -297,25 +290,24 @@ def browserstack_callback(request, img_id):
     try:
         # get the payload from the callback
         bs_payload = json.loads(request.body)
-        print("BROWSER STACK image completed rendering")
     except Exception, e:
         print(str(e))
         return HttpResponse(status=500)
 
-    # get the image object that has currently null image file and supply it with the url of the image
+    # get the image object that has currently null image file and update it with bs url
     img_obj = Image.objects.get(id=img_id)
     img_obj.img_file = bs_payload['screenshots'][0]['image_url']
+    print("BROWSER STACK image {0} completed rendering".format(img_obj.img_file.name))
     img_obj.save()
 
     dependent_diffs = img_obj.target_img_in_Diff.all() | img_obj.source_img_in_Diff.all()
     for diff in dependent_diffs:
-        if (not img_loaded(diff.diff_img_file) and 
-            img_loaded(diff.target_img.img_file) and 
-            img_loaded(diff.source_img.img_file)):
+        if (not img_loaded(diff.diff_img_file) and
+                img_loaded(diff.target_img.img_file) and
+                img_loaded(diff.source_img.img_file)):
 
-            print 'Discovered new Diff to create'
-            django_rq.get_queue('default').enqueue(gen_diff, 
-                                                   diff.target_img.img_file.name, 
+            print 'Discovered new Diff to create ...'
+            django_rq.get_queue('default').enqueue(gen_diff,
+                                                   diff.target_img.img_file.name,
                                                    diff.source_img.img_file.name)
     return HttpResponse(status=200)
-

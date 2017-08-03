@@ -6,8 +6,22 @@ Generates perceptual diff of a git repository as you make pull requests.
 
 ### Install dependencies
 
+#### System Requirements
+Download and install the following:
+[Python 2](https://www.python.org/downloads/) w/ pip installed
+[Node](https://nodejs.org/en/) w/ npm installed
+[Redis](https://redis.io/)
+[PostgreSQL](https://www.postgresql.org/)
+  ```postgres
+  CREATE DATABASE garnish_db
+  CREATE USER garnish_user WITH LOGIN PASSWORD 'garnish'
+  ```
+[PhantomJS](http://phantomjs.org/)
+
+#### Python Packages
 ```
 $ pip install -r requirements.txt
+$ yarn installrm
 ```
 
 ### Initial setup and personal configurations
@@ -64,7 +78,10 @@ http://127.0.0.1:8000/
 In the root of this directory utilize the following Django commands.
 
 #### Generate screenshots and take Image Diffs of a Github Pull Request
+NOTE: you must run redis-server before you run the auto-screenshot command
 ```
+$ redis-server
+--- open a new terminal view ---
 $ python manage.py auto-screenshot <Github Pull Request Number>
 ```
 

@@ -7,14 +7,12 @@
         ~ If no states are even checked in, do nothing.
         ~ if PR number isn''t valid, do nothing
 '''
-import sys
 from collections import defaultdict
 from os import path
 
 import django_rq
-import requests
 import sh
-import time
+
 from add_pr_info import add_pr_info
 from add_screenshots import add_screenshots
 from django.conf import settings  # database dir
@@ -36,7 +34,7 @@ def switchBranch(gitBranch):
 
 # Helper method to check if the image is currently loading or not. Return True if loaded
 def img_loaded(img_file):
-    return not img_file == None and not img_file.name == ''
+    return not img_file == None and not img_file.name == ''  # noqa: E711
 
 
 def generate_diffs(img_dict):
@@ -44,7 +42,8 @@ def generate_diffs(img_dict):
         # the list associated to a key should be exactly 2 one for head one for branch
         # else it is invalid for generating a diff
         if len(img_dict[img_pair]) == 2:
-            if not img_loaded(img_dict[img_pair][0].img_file) or not img_loaded(img_dict[img_pair][1].img_file):
+            if (not img_loaded(img_dict[img_pair][0].img_file) or
+               not img_loaded(img_dict[img_pair][1].img_file)):
                 temp_diff = Diff(target_img=img_dict[img_pair][0], source_img=img_dict[img_pair][1])
                 temp_diff.save()
             else:
@@ -52,20 +51,20 @@ def generate_diffs(img_dict):
                          img_dict[img_pair][1].img_file.name)
 
         elif len(img_dict[img_pair]) == 1:
-            print ('''No Diff could be made. State "{0}" is defined for Branch "{1}" but not the opposing Branch. Please fix this.
-                   '''.format(img_dict[img_pair][0].state.state_name,            
-                              img_dict[img_pair][0].state.git_commit.git_branch))
+            print('No Diff could be made. State "{0}" is defined for Branch "{1}" but not the opposing Branch. Please fix this.'.format(  # noqa: E501
+                  img_dict[img_pair][0].state.state_name,
+                  img_dict[img_pair][0].state.git_commit.git_branch))
         else:
-            print ('''No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.
-                   '''.format(img_dict[img_pair][0].state.state_name,          
-                              img_dict[img_pair][0].state.git_commit.git_branch))
+            print('No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.'.format(  # noqa: E501
+                  img_dict[img_pair][0].state.state_name,
+                  img_dict[img_pair][0].state.git_commit.git_branch))
     return
 
 
 # parrallel processes for each stateName from here
-        # input: A single stateName
-        # Output: Screenshots for all states, All diffs possible
-        # Edge: Can be 0 diffs generated 
+    # input: A single stateName
+    # Output: Screenshots for all states, All diffs possible
+    # Edge: Can be 0 diffs generated
 def generate_images(state_name):
     img_dict = defaultdict(list)  # {'key': [<ImgObj1>, <ImgObj2>], 'key2': [...}
     for single_state in state_name:  # should run two times
@@ -83,21 +82,19 @@ def generate_images(state_name):
             img_dict[key].append(i)
 
     # if there are any images
-    if img_dict: 
+    if img_dict:
         RQ_QUEUE.enqueue(generate_diffs, img_dict)
     else:
         print('There was no setting for which screenshots to generate, so none were generated')  # noqa: E501
     return
 
+
 # arguments can either be: int(prNumber) or dict(payload)
 def diffs_from_pr(prnumber_or_payload):
-    start_time = time.time()
-
     # output the states that were added to the database
     savedStatesDict = add_pr_info(prnumber_or_payload)
     for stateName in savedStatesDict:
         # generateFromState(savedStatesDict[stateName])
-        gen_img_job = RQ_QUEUE.enqueue(generate_images, savedStatesDict[stateName])
+        RQ_QUEUE.enqueue(generate_images, savedStatesDict[stateName])
 
     print('Completed all tasks')
-    print("--- %s seconds ---" % (time.time() - start_time))

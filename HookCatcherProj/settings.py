@@ -126,15 +126,14 @@ except NameError:
 except IOError:
     pass
 
-
-
 # Database
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
+
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'garnish_db',                      
+        'NAME': 'garnish_db',
         'USER': 'garnish_user',
         'PASSWORD': 'garnish',
         'HOST': '127.0.0.1',
@@ -150,14 +149,5 @@ RQ_QUEUES = {
         'DB': 0,
         'PASSWORD': '',
         'DEFAULT_TIMEOUT': 360,
-    },
-    'high': {
-        'URL': os.getenv('REDISTOGO_URL', 'redis://localhost:6379/0'), # If you're on Heroku
-        'DEFAULT_TIMEOUT': 500,
-    },
-    'low': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
     },
 }

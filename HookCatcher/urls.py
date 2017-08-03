@@ -21,7 +21,8 @@ urlpatterns = [
     url(r'^state/branch/(?P<branchName>[a-zA-Z0-9:;_-]+)/(?P<commitSHA>[a-zA-Z1-9]+)/$',
         views.singleBranch, name='singleBranch'),
     url(r'^webhook/$', views.webhook, name='webhook'),
-    url(r'^bs_callback/(?P<img_id>[0-9]+)$', views.browserstack_callback, name='browserstack_callback'),
+    url(r'^bs_callback/(?P<img_id>[0-9]+)$',
+        views.browserstack_callback, name='browserstack_callback'),
 ]
 
 if settings.DEBUG is True:
