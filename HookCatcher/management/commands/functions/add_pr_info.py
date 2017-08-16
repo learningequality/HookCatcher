@@ -4,6 +4,8 @@ from collections import defaultdict
 
 import requests
 from django.conf import settings  # database dir
+from HookCatcher.management.commands.functions.new_commit_old_pr import \
+  new_commit_old_pr
 from HookCatcher.models import PR, Commit, State
 
 STATES_FOLDER = settings.STATES_FOLDER  # folder within git repo that organizes the list of states
@@ -141,8 +143,8 @@ def add_pr_info(prnumber_payload):
     # save the json state representations into the database and add added states to list
     headStatesList = State.objects.filter(git_commit=headCommitObj)
 
-    # key is url because devs can make mistake of changing state name
-    # if url changes betweeen state versions then need way of shared identifier
+    # key is state_name because a single state may have two different urls depending on version
+    # if people name the state wrong this can cause errors in the system
     for stateObjB in baseStatesList:
         newStatesDict[stateObjB.state_name].append(stateObjB)
     for stateObjH in headStatesList:
@@ -151,9 +153,21 @@ def add_pr_info(prnumber_payload):
 
     # if this PR doesn't exist in the database yet
     if(PR.objects.filter(git_pr_number=specificPR['number']).count() > 0):
-        print('PR #{0} for Base Github Repo: "{1}/{2}" already exists'.format(specificPR['number'],
-                                                                              baseRepoName,
-                                                                              baseBranchName))
+        existing_PR = PR.objects.get(git_pr_number=specificPR['number'])
+        if (baseCommitObj.git_hash != existing_PR.git_target_commit.git_hash or
+           headCommitObj.git_hash != existing_PR.git_source_commit.git_hash):
+            print('New changes detected in PR #{0} Git Repo: "{1}/{2}"'.format(specificPR['number'],
+                                                                               baseRepoName,
+                                                                               baseBranchName))
+            new_commit_old_pr(existing_PR, baseStatesList, headStatesList)
+            existing_PR.git_target_commit = baseCommitObj
+            existing_PR.git_source_commit = headCommitObj
+        else:
+            print('PR #{0} for Github Repo: "{1}/{2}" already exists'.format(specificPR['number'],
+                                                                             baseRepoName,
+                                                                             baseBranchName))
+
+        # else do nothing because this is just a repeated call for the same commits in the same PR
     else:
         # save information into the PR model
         prObject = PR(git_repo=baseRepoName,

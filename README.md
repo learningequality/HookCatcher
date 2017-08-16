@@ -7,7 +7,7 @@ Generates perceptual diff of a git repository as you make pull requests.
 ### Install dependencies
 
 #### System Requirements
-Download and install the following:
+Download and install the following:<br />
 [Python 2](https://www.python.org/downloads/) w/ pip installed<br />
 [Node](https://nodejs.org/en/) w/ npm installed<br />
 [Redis](https://redis.io/)<br />
