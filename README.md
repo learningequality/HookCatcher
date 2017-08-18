@@ -30,11 +30,6 @@ First, you'll need a directory for storing data. You can either start from scrat
 
 
 To point at the data, create a new _user_settings.py_ file in the project root.
-Add the local directory that your data is stored in:
-
-```python
-DATABASE_DIR = "../HookCatcherData"
-```
 
 Add the Github Repository that you are testing for:
 https://github.com/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO

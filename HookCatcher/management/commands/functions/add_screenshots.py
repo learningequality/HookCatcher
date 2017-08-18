@@ -14,8 +14,6 @@ import django_rq
 import requests
 import sh
 from django.conf import settings  # database dir
-from django.core.exceptions import ValidationError
-from django.core.validators import URLValidator
 from HookCatcher.models import Image
 
 
@@ -27,17 +25,6 @@ def get_ngrok(local_url):
 
     elif "127.0.0.1:8000" in local_url:
         return local_url.replace("127.0.0.1:8000", ngrok_url)
-
-
-# Helper function for creating the image path and then return if that file exists
-def img_exists(img_file_name):
-    # check if the file name is url or nah and see if that url is real
-    validator = URLValidator()
-    try:
-        validator(img_file_name)
-        return requests.get(img_file_name).status_code == 200
-    except ValidationError:
-        return os.path.exists(os.path.join(settings.MEDIA_ROOT, img_file_name))
 
 
 def get_img_name(browser, osys, img_width, img_height, state_obj):
@@ -76,8 +63,8 @@ def browserstack(state_obj, config):
                                      device_res_height=HEIGHT)
 
     # generate new image if this image file doesn't exist
-    if (img_query.count() == 0 or
-       img_query.count() == 1 and not img_exists(img_query.get().img_file.name)):
+    if (img_query.count() == 0 or img_query.count() == 1 and
+       img_query.get().image_rendered() and not img_query.get().image_exists()):
         # need to save the image object and get the pk to send to the callback url
         if img_query.count() == 1:
             # save this file plus information into Image model
@@ -127,17 +114,17 @@ def browserstack(state_obj, config):
         else:
             img_obj.delete()
             print ('There was some error in the BrowserStack API request settings')
-            return
 
     # if this exact image is in the database and in the file system, just return the image obj
-    elif img_query.count() == 1 and img_exists(img_query.get().img_file.name):
+    elif img_query.count() == 1 and img_query.get().image_exists():
         print('Image named already exists: {0}'.format(img_query.get().img_file.name))
         return img_query.get()
-    else:
+    elif img_query.count() > 1:
         # if the img_query returns more than 1 item there is an error
         print img_query
         print 'there are more than 1 copies of this image'
-        return
+    # else the image may be still proccessing
+    return
 
 
 def chrome(state_obj, config):
@@ -156,7 +143,7 @@ def chrome(state_obj, config):
 
     # generate new image if this image file doesn't exist
     if (img_query.count() == 0 or
-       img_query.count() == 1 and not img_exists(img_query.get().img_file.name)):
+       img_query.count() == 1 and not img_query.get().image_exists()):
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
             sh.node('screenshotScript/headlessChrome.js',  # where the capture.js script is
                     '--url={0}'.format(state_obj.state_url),                # url for screenshot
@@ -179,13 +166,12 @@ def chrome(state_obj, config):
                                                                    img_obj.img_file.name)))
             return img_obj
     # if this exact image is in the database and in the file system, just return the image obj
-    elif img_query.count() == 1 and img_exists(img_query.get().img_file.name):
+    elif img_query.count() == 1 and img_query.get().image_exists():
         print('Image named already exists: {0}'.format(os.path.join(settings.MEDIA_ROOT,
                                                                     img_query.get().img_file.name)))
         return img_query.get()
     else:
-        print img_query
-        print 'there are more than 1 copies of this image'
+        print('There is more than 1 copy of the same image in the database. QuerySet: {0}'.format(img_query))  # noqa: E501
         # if the img_query returns more than 1 item there is an error
         return
 
@@ -207,7 +193,7 @@ def phantom(state_obj, config):
 
     # generate new image if this image file doesn't exist
     if (img_query.count() == 0 or
-       img_query.count() == 1 and not img_exists(img_query.get().img_file.name)):
+       img_query.count() == 1 and not img_query.get().image_exists()):
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
             sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
                          state_obj.state_url,        # url for screenshot
@@ -230,7 +216,7 @@ def phantom(state_obj, config):
                                                                    img_obj.img_file.name)))
             return img_obj
     # if this exact image is in the database and in the file system, just return the image obj
-    elif img_query.count() == 1 and img_exists(img_query.get().img_file.name):
+    elif img_query.count() == 1 and img_query.get().image_exists():
         print('Image named already exists: {0}'.format(os.path.join(settings.MEDIA_ROOT,
                                                                     img_query.get().img_file.name)))
         return img_query.get()

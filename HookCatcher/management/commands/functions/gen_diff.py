@@ -6,36 +6,10 @@ return: diff image of two screenshots of a single state
 import os
 import tempfile
 
-import requests
 import sh
 from django.conf import settings  # database dir
-from django.core.exceptions import ValidationError
 from django.core.management.base import CommandError
-from django.core.validators import URLValidator
 from HookCatcher.models import Diff, Image
-
-# directory for storing images in the data folder
-IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
-
-
-# Helper function for creating the image path and then return if that file exists
-def img_exists(img_file_name):
-    # check if the file name is url or nah and see if that url is real
-    validator = URLValidator()
-    try:
-        validator(img_file_name)
-        return requests.get(img_file_name).status_code == 200
-    except ValidationError:
-        return os.path.exists(os.path.join(settings.MEDIA_ROOT, img_file_name))
-
-
-def is_url(img_file_name):
-    validator = URLValidator()
-    try:
-        validator(img_file_name)
-        return True
-    except ValidationError:
-        return False
 
 
 # generates the appropriate name for the new diff image
@@ -91,17 +65,10 @@ def imagemagick(img1_path, img2_path, diff_name="", diff_obj=None):
 # responsible for checking if the images exist and generating the diff if th ydo
 def validate_diff(diff_tool, img1, img2):
     # get the full path of the image if the image needed is in local storage else keep url
-    if is_url(img1.img_file.name):
-        img1_path = img1.img_file.path
-    else:
-        img1_path = img1.img_file.name
-    if is_url(img2.img_file.name):
-        img2_path = img2.img_file.path
-    else:
-        img2_path = img2.img_file.name
-
-    if img_exists(img1.img_file.name) is True:
-        if img_exists(img2.img_file.name) is True:
+    if img1.image_exists() is True:
+        img1_path = img1.get_image_location()
+        if img2.image_exists() is True:
+            img2_path = img2.get_image_location()
             # generate the name of the new Diff image
             diff_name = getDiffImageName(img1, img2)
 

@@ -1,7 +1,11 @@
 from __future__ import unicode_literals
 
+import os
 import uuid
 
+import requests
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
@@ -65,7 +69,15 @@ class PR(models.Model):
         for source_image in self.git_source_commit.get_images():
             source_diff_list.extend(source_image.source_img_in_Diff.all())
 
-        return set(target_diff_list)
+        # find the intersection between the two lists in case image is used in mulitple diffs
+        return set(target_diff_list) & set(source_diff_list)
+
+    def num_diffs_approved(self):
+        count_approved = 0
+        for diff in self.get_diffs():
+            if diff.is_approved:
+                count_approved = count_approved + 1
+        return count_approved
 
     def __str__(self):
         return '%s: PR #%d' % (self.git_repo, self.git_pr_number)
@@ -78,8 +90,41 @@ class History(models.Model):
     is_error = models.BooleanField(default=False)
     pr = models.ForeignKey(PR, on_delete=models.CASCADE)
 
+    # record actions in a Pull Request Event Payload to History
+    @classmethod
+    def log_pr_action(cls, pr_obj, git_payload_action, username):
+        msg = 'PR #{0} has been {1} by {2}'.format(pr_obj.git_pr_number,
+                                                   git_payload_action,
+                                                   username)
+        cls(message=msg, pr=pr_obj).save()
+        return
+
+    # record how many diffs were generated and how many still avaliable in history
+    @classmethod
+    def log_initial_diffs(cls, pr_obj, num):
+        msg = '{0} Diffs were generated, of which {1} were automatically approved'.format(
+              len(pr_obj.get_diffs), pr_obj.num_diffs_approved())
+
+        cls(message=msg, pr=pr_obj).save()
+        return
+
+    # record in history when a user manually approves of a diff
+    @classmethod
+    def log_user_approval(cls, pr_obj, diff_obj, username):
+        msg = 'Diff of state "{0}" was approved by "{1}"'.format(
+              diff_obj.target_img.state.state_name, username)
+        cls(message=msg, pr=pr_obj).save()
+        return
+
+    # record in history any internal system errors
+    @classmethod
+    def log_sys_error(cls, pr_obj, error_message):
+        msg = 'INTERNAL SYSTEM ERROR: {0}'.format(error_message)
+        cls(message=msg, pr=pr_obj, is_error=True).save()
+        return
+
     def __str__(self):
-        return 'PR #%d: %s' % (self.PR.git_pr_number, self.message)
+        return 'PR #%d: %s' % (self.pr.git_pr_number, self.message)
 
 
 @python_2_unicode_compatible
@@ -92,9 +137,37 @@ class Image(models.Model):
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 
+    # Help check if the image is currently loading or not. Return True if done loaded
+    def image_rendered(self):
+        # callback images have no file name when rendering
+        return not (self.img_file == None or self.img_file.name == '')  # noqa: E711
+
+    # Returns the full path of the image_file or the url depending on where it stored
+    def get_image_location(self):
+        validator = URLValidator()
+        try:
+            validator(self.img_file.name)
+            return self.img_file.name
+        except ValidationError:  # is not a url
+            return self.img_file.path
+
+    # Validates if an image file exists whether as a url or a local image
+    def image_exists(self):
+        # If there is even a name to validate
+        if self.image_rendered():
+            # check if the file name is url or nah and see if that url is real
+            validator = URLValidator()
+            try:
+                validator(self.img_file.name)
+                return requests.get(self.img_file.name).status_code == 200
+            except ValidationError:
+                return os.path.exists(self.img_file.path)
+        else:
+            return False
+
     def __str__(self):
         # if the img_file doesn't exist and therefore has no file name, print so
-        if self.img_file == None or self.img_file.name == '':  # noqa: E711
+        if not self.image_rendered():
             # for the case when the image is not done loading yet
             return 'Image File is Currently Processing...'
         else:
@@ -111,10 +184,15 @@ class Diff(models.Model):
     source_img = models.ForeignKey(Image, related_name='source_img_in_Diff',
                                    on_delete=models.CASCADE)
     diff_percent = models.DecimalField(max_digits=6, decimal_places=5, default=0)
-    # is_approved = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
+
+    # Help check if the image is currently loading or not. Return True if rendered
+    def diff_image_rendered(self):
+        # callback images have no file name when rendering
+        return not self.diff_img_file == None and not self.diff_img_file.name == ''  # noqa: E711
 
     def __str__(self):
-        if self.diff_img_file == None or self.diff_img_file.name == '':  # noqa: E711
+        if not self.diff_image_rendered():
             # for the case when the image is not done loading yet
             return 'Diff is waiting on Images to Process...'
         else:
