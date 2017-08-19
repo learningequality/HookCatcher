@@ -40,16 +40,10 @@ docker run -it <JUST_GENERATED_DOCKER_BUILD_HASH> bash
 
 ## Setup
 
-<<<<<<< HEAD
 ### Environment Variables
 *All manage.py commands will need the proper environment variables set to run properly*
 
 The Github Repository that you are testing for:
-=======
-To point at the data, create a new _user_settings.py_ file in the project root.
-
-Add the Github Repository that you are testing for:
->>>>>>> e3f3c5eff439803e529100392c7839d32ae061c3
 https://github.com/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO
 ```GIT_REPO```
 
@@ -70,10 +64,8 @@ Specify the port that is running PostgreSQL:
 
 
 **Optional:**<br />
-
 If you are planning to use BrowserStack API, specify your username:
 ```BROWSERSTACK_USERNAME```
-
 
 Also specify your BrowserStack OAUTH Token
 ```BROWSERSTACK_OAUTH```
