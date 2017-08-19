@@ -50,39 +50,39 @@ GIT_REPO='YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO'
 
 Your Github [personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/):
 ```
-GIT_OAUTH
+GIT_OAUTH='YOU_AUTH_ID_HERE'
 ```
 
 The name of the directory in the Git Repository that stores the state representation JSON files. See [this folder](https://github.com/MingDai/kolibri/tree/test-master/states) for example:
 ```
-STATES_FOLDER
+STATES_FOLDER='NAME_OF_YOUR_STATES_FOLDER'
 ```
 
-Set what screen capture tools and resolutions you want. Add the screenshot configuration file to root of this directory. See [this file](https://github.com/MingDai/HookCatcher/HookCatcher/blob/develop/config.json) for example:
+Set what screen capture tools and resolutions you want. Add the screenshot configuration file to root of this directory. See [this file](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/config.json) for example:
 ```
-SCREENSHOT_CONFIG
-```
-
-Specify the port that is running Redis:
-```
-REDIS_PORT
+SCREENSHOT_CONFIG='PATH_TO_YOUR_CONFIG_FILE'
 ```
 
-Specify the port that is running PostgreSQL:
+Specify the port that is running Redis (defaults to 6379):
 ```
-POSTGRES_PORT
+REDIS_PORT='REDIS_PORT_NUMBER'
+```
+
+Specify the port that is running PostgreSQL (defaults to 5432):
+```
+POSTGRES_PORT='POSTGRES_PORT_NUMBER'
 ```
 
 
 **Optional:**<br />
 If you are planning to use BrowserStack API, specify your username:
 ```
-BROWSERSTACK_USERNAME
+BROWSERSTACK_USERNAME='YOUR_BROWSERSTACK_USERNAME'
 ```
 
-Also specify your BrowserStack OAUTH Token:
+Also specify your BrowserStack OAUTH [access key](https://www.browserstack.com/accounts/settings):
 ```
-BROWSERSTACK_OAUTH
+BROWSERSTACK_OAUTH='YOUR_BROWSERSTACK_ACCESS_KEY'
 ```
 
 
@@ -90,16 +90,18 @@ BROWSERSTACK_OAUTH
 **Production:**<br />
 Provide a Django Secret Key environment variable:
 ```
-DJANGO_SECRET_KEY
+DJANGO_SECRET_KEY='YOUR_PRODUCTION_KEY'
 ```
 
 ### Start the server
 1. Open a new window and start Redis by running the command `$ redis-server`
+
 2. From the root, navigate into the *HookCatcher* directory `$ cd Hookcatcher/`
-3. Open how ever many more windows and start your Redis Queue workers `$  python manage.py rqworker default`
+
+3. Open how ever many more windows and start a Redis Queue worker on each `$  python manage.py rqworker default`
+
 4. To start the server, run
 `$ python manage.py runserver (port)`
-
 NOTE: port defaults to 8000
 
 To view site enter the following website url into your browser:
@@ -112,8 +114,6 @@ In the root of this directory utilize the following Django commands.
 #### Generate screenshots and take Image Diffs of a Github Pull Request
 NOTE: you must run redis-server before you run the auto-screenshot command
 ```
-$ redis-server
---- open a new terminal view ---
 $ python manage.py auto-screenshot <Github Pull Request Number>
 ```
 
