@@ -44,37 +44,54 @@ docker run -it <JUST_GENERATED_DOCKER_BUILD_HASH> bash
 *All manage.py commands will need the proper environment variables set to run properly*
 
 The Github Repository that you are testing for:
-https://github.com/YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO
-```GIT_REPO```
+```
+GIT_REPO='YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO'
+```
 
 Your Github [personal access token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/):
-```GIT_OAUTH```
+```
+GIT_OAUTH
+```
 
 The name of the directory in the Git Repository that stores the state representation JSON files. See [this folder](https://github.com/MingDai/kolibri/tree/test-master/states) for example:
-```STATES_FOLDER```
+```
+STATES_FOLDER
+```
 
-Set what screen capture tools and resolutions you want. Add the screenshot configuration file to root of this directory. See [this file](https://github.com/MingDai/HookCatcher/blob/develop/config.json) for example:
-```SCREENSHOT_CONFIG```
+Set what screen capture tools and resolutions you want. Add the screenshot configuration file to root of this directory. See [this file](https://github.com/MingDai/HookCatcher/HookCatcher/blob/develop/config.json) for example:
+```
+SCREENSHOT_CONFIG
+```
 
 Specify the port that is running Redis:
-```REDIS_PORT```
+```
+REDIS_PORT
+```
 
 Specify the port that is running PostgreSQL:
-```POSTGRES_PORT```
+```
+POSTGRES_PORT
+```
 
 
 **Optional:**<br />
 If you are planning to use BrowserStack API, specify your username:
-```BROWSERSTACK_USERNAME```
+```
+BROWSERSTACK_USERNAME
+```
 
-Also specify your BrowserStack OAUTH Token
-```BROWSERSTACK_OAUTH```
+Also specify your BrowserStack OAUTH Token:
+```
+BROWSERSTACK_OAUTH
+```
 
 
 
 **Production:**<br />
 Provide a Django Secret Key environment variable:
-```DJANGO_SECRET_KEY```
+```
+DJANGO_SECRET_KEY
+```
 
 ### Start the server
 1. Open a new window and start Redis by running the command `$ redis-server`
