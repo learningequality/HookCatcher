@@ -20,7 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'qwnj&01%5_q$j+&v**2o9mafh+zt9^y^ntgkr#wp+a125ky(ta'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or 'qwnj&01%5_q$j+&v**2o9mafh+zt9^y^ntgkr#wp+a125ky(ta'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -116,20 +116,44 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media').replace('\\', '/')
 MEDIA_URL = '/media/'
 
 
-# Load user settings. Need to at least set DATABASE_DIR
-try:
-    execfile(os.path.join(BASE_DIR, "user_settings.py"), globals(), locals())
-except NameError:
-    with open(os.path.join(BASE_DIR, "user_settings.py")) as f:
-        code = compile(f.read(), os.path.join(BASE_DIR, "user_settings.py"), 'exec')
-        exec(code, globals(), locals())
-except IOError:
-    pass
+# Load user specific settings saved in a separate file
+# try:
+#     execfile(os.path.join(BASE_DIR, "user_envs.py"), globals(), locals())
+# except NameError:
+#     with open(os.path.join(BASE_DIR, "user_envs.py")) as f:
+#         code = compile(f.read(), os.path.join(BASE_DIR, "user_envs.py"), 'exec')
+#         exec(code, globals(), locals())
+# except IOError:
+#     pass
+
+
+# --- GET ALL THE OTHER ENV VARIABLES ---
+GIT_REPO = os.getenv('GIT_REPO')    # the Github Repository you are attempting to link to
+
+GIT_OAUTH = os.getenv('GIT_OAUTH')  # your Github Access Token
+
+# the name of the directory in the Git Repository that stores the state representation JSON files.
+STATES_FOLDER = os.getenv('STATES_FOLDER')
+
+# Local file path of the directory being pointed to used to switch branches (depreicated)
+WORKING_DIR = os.getenv('WORKING_DIR') or ''
+
+# File to set what specific screenshot settings you want
+SCREENSHOT_CONFIG = os.getenv('SCREENSHOT_CONFIG')
+
+# browser stack api username
+BROWSERSTACK_USERNAME = os.getenv('BROWSERSTACK_USERNAME') or ''
+
+# browser stack api authentication *need subscription*
+BROWSERSTACK_OAUTH = os.getenv('BROWSERSTACK_OAUTH') or ''
+
+# try to get the env variable for Postgres port
+POSTGRES_PORT = os.getenv('POSTGRES_PORT')
+if not POSTGRES_PORT:
+    POSTGRES_PORT = 5432
 
 # Database
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
-
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -137,15 +161,19 @@ DATABASES = {
         'USER': 'garnish_user',
         'PASSWORD': 'garnish',
         'HOST': '127.0.0.1',
-        'PORT': '',
+        'PORT': POSTGRES_PORT,
     }
 }
 
+# try to get the env variable for Redis port
+REDIS_PORT = os.getenv('REDIS_PORT')
+if not REDIS_PORT:
+    REDIS_PORT = 6379
 
 RQ_QUEUES = {
     'default': {
         'HOST': 'localhost',
-        'PORT': 6379,
+        'PORT': REDIS_PORT,
         'DB': 0,
         'PASSWORD': '',
         'DEFAULT_TIMEOUT': 360,

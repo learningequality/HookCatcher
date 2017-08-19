@@ -43,7 +43,7 @@ const protocol = await CDP({port: chrome.port});
   await Page.enable();
   await DOM.enable();
   await Network.enable();
-  
+
   // Navigate to target page
   frameID = await Page.navigate({url});
 

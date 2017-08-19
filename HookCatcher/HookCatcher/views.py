@@ -4,9 +4,7 @@ import os
 import django_rq
 import requests
 from django.conf import settings  # database dir
-from django.core.exceptions import ValidationError
 from django.core.management import call_command  # call newPR update command
-from django.core.validators import URLValidator
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -14,17 +12,6 @@ from django.views.decorators.http import require_POST
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
 from .models import PR, Commit, Diff, Image, State
-
-IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')  # assume an img folder in database
-
-
-def is_url(img_file_name):
-    validator = URLValidator()
-    try:
-        validator(img_file_name)
-        return True
-    except ValidationError:
-        return False
 
 
 # representation for models so you don't have to change every value for models in every template
@@ -59,10 +46,7 @@ def pr_representation(pr_obj):
 
 
 def image_representation(image_obj):
-    if is_url(image_obj.img_file.name):
-        img_name = image_obj.img_file.name
-    else:
-        img_name = os.path.join(settings.MEDIA_URL, image_obj.img_file.name)
+    img_name = image_obj.get_image_location()
     return {
         'name': img_name,
         'browser_type': image_obj.browser_type,
@@ -74,15 +58,8 @@ def image_representation(image_obj):
 
 
 def diff_representation(diff_obj):
-    file_name = None
-    if diff_obj.diff_img_file.name:
-        if is_url(diff_obj.diff_img_file.name):
-            file_name = diff_obj.diff_img_file.name
-        else:
-            file_name = os.path.join(settings.MEDIA_URL, diff_obj.diff_img_file.name)
-
     return {
-        'name': file_name,
+        'name': os.path.join(settings.MEDIA_URL, diff_obj.diff_img_file.name),
         'target_img': image_representation(diff_obj.target_img),
         'source_img': image_representation(diff_obj.source_img),
         'diff_percent': diff_obj.diff_percent
@@ -279,11 +256,6 @@ def webhook(request):
         return HttpResponse(status=500)
 
 
-# Helper method to check if the image is currently loading or not. Return True if loaded
-def img_loaded(img_file):
-    return not img_file == None and not img_file.name == ''  # noqa: E711
-
-
 @csrf_exempt
 @require_POST
 def browserstack_callback(request, img_id):
@@ -302,9 +274,9 @@ def browserstack_callback(request, img_id):
 
     dependent_diffs = img_obj.target_img_in_Diff.all() | img_obj.source_img_in_Diff.all()
     for diff in dependent_diffs:
-        if (not img_loaded(diff.diff_img_file) and
-                img_loaded(diff.target_img.img_file) and
-                img_loaded(diff.source_img.img_file)):
+        if (not diff.diff_image_rendered() and
+                diff.target_img.image_rendered() and
+                diff.source_img.image_rendered()):
 
             print 'Discovered new Diff to create ...'
             django_rq.get_queue('default').enqueue(gen_diff,

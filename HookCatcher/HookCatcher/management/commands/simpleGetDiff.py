@@ -6,13 +6,7 @@ return: diff image of two screenshots of a single state
 import os
 import sh
 
-from django.conf import settings  # database dir
 from django.core.management.base import BaseCommand
-from HookCatcher.management.commands.functions.gen_diff import gen_diff
-
-
-# directory for storing images in the data folder
-IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
 
 
 # calls image magick on two images
@@ -39,13 +33,13 @@ def imgMagickCompare(imgPath1, imgPath2, diffPath):
 
         # returns pixels and a % in () we only want the % ex: 25662.8 (0.39159)
         idxPercent = diffOutput.index('(') + 1
-        diffPercent = diffOutput[idxPercent:len(diffOutput)-1]
+        diffPercent = diffOutput[idxPercent:len(diffOutput) - 1]
         print "Percent difference: " + diffPercent
         pass
     return diffPercent
 
 
-def gen_diff(imgPath1, imgPath2, diffTool='imagemagick', diffName):
+def gen_diff(imgPath1, imgPath2, diffName, diffTool='imagemagick'):
     if(os.path.exists(imgPath1) is True):
         if(os.path.exists(imgPath2) is True):
 
@@ -60,6 +54,7 @@ def gen_diff(imgPath1, imgPath2, diffTool='imagemagick', diffName):
         print ('The first image: "{0}"  to be compared does not exist'.format(imgPath1))
     return
 
+
 class Command(BaseCommand):
     help = 'Choose two image screenshots of the same state, resolution, os, and browser to take a diff of'  # noqa: E501
 
@@ -72,10 +67,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # call genDiff function
-        print options['diffName']
         diff_percent = gen_diff(options['imgPath1'],
                                 options['imgPath2'],
-                                options['diffTool'],
                                 options['diffName'])
         if diff_percent:
             print('Diff: "{0}" is {1} different'.format(options['diffName'], diff_percent))

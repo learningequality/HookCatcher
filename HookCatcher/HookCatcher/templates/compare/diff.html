@@ -54,7 +54,7 @@
                         <div class="diffContainer">
                             <div class="diffHalf">
                                 <p> {{PR.git_target_commit.git_repo}} ({{PR.git_target_commit.git_branch}}) </p>
-                                {% if diff_dict.diff_obj.target_img.name %} 
+                                {% if diff_dict.diff_obj.target_img.name %}
                                     <img src="{{diff_dict.diff_obj.target_img.name}}">
                                 {% else %}
                                     <div class="loading-spinner">
@@ -69,7 +69,7 @@
                             <div class="diffHalf">
                                 <p> {{PR.git_source_commit.git_repo}} ({{PR.git_source_commit.git_branch}}) </p>
 
-                                {% if diff_dict.diff_obj.name %} 
+                                {% if diff_dict.diff_obj.name %}
                                     <img src="{{diff_dict.diff_obj.name}}" style="display:block" onclick="toggle(this)">
                                 {% else %}
                                     <div class="loading-spinner" style="display:block" onclick="toggle(this)">
@@ -80,7 +80,7 @@
                                         <div class="loading-rect5"></div>
                                     </div>
                                 {% endif%}
-                                {% if diff_dict.diff_obj.source_img.name %} 
+                                {% if diff_dict.diff_obj.source_img.name %}
                                      <img src="{{diff_dict.diff_obj.source_img.name}}" style="display:none" onclick="toggle(this)">
                                 {% else %}
                                     <div class="loading-spinner" style="display:none" onclick="toggle(this)">
@@ -109,7 +109,7 @@
                         <div class="diffContainer">
                             <div class="diffHalf">
                                 <p> {{PR.git_target_commit.git_repo}} ({{PR.git_target_commit.git_branch}}) </p>
-                                {% if diff_dict.diff_obj.target_img.name %} 
+                                {% if diff_dict.diff_obj.target_img.name %}
                                     <img src="{{diff_dict.diff_obj.target_img.name}}">
                                 {% else %}
                                     <div class="loading-spinner">
@@ -124,7 +124,7 @@
                             <div class="diffHalf">
                                 <p> {{PR.git_source_commit.git_repo}} ({{PR.git_source_commit.git_branch}}) </p>
 
-                                {% if diff_dict.diff_obj.name %} 
+                                {% if diff_dict.diff_obj.name %}
                                     <img src="{{diff_dict.diff_obj.name}}" style="display:block" onclick="toggle(this)">
                                 {% else %}
                                     <div class="loading-spinner" style="display:block" onclick="toggle(this)">
@@ -135,7 +135,7 @@
                                         <div class="loading-rect5"></div>
                                     </div>
                                 {% endif%}
-                                {% if diff_dict.diff_obj.source_img.name %} 
+                                {% if diff_dict.diff_obj.source_img.name %}
                                      <img src="{{diff_dict.diff_obj.source_img.name}}" style="display:none" onclick="toggle(this)">
                                 {% else %}
                                     <div class="loading-spinner" style="display:none" onclick="toggle(this)">

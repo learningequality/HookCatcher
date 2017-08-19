@@ -11,14 +11,10 @@ import sh
 from django.conf import settings  # database dir
 from django.core.management.base import BaseCommand, CommandError
 
-# directory for storing images in the data folder
-IMG_DATABASE_DIR = os.path.join(settings.DATABASE_DIR, 'img')
-
 
 # retrieve the information of a single state and generate an image based on that
 def genPhantom(url, imgName, config):
     # generate the specific headless browser screenshot
-
     res = config["resolution"]
     currOS = platform.system() + ' ' + platform.release()  # get current os
 
@@ -32,12 +28,12 @@ def genPhantom(url, imgName, config):
     # take the screenshot and save png file to a directory
     sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
                  url,  # url for screenshot
-                 '{0}/{1}'.format(IMG_DATABASE_DIR, imgName),  # img name
+                 '{0}/{1}'.format(imgName),  # img name
                  res[0],  # width
                  res[1])  # height
 
-    print('Generated image: {0}/{1}'.format(IMG_DATABASE_DIR, imgName))
-    sh.open('{0}/{1}'.format(IMG_DATABASE_DIR, imgName))
+    print('Generated image: {0}/{1}'.format(imgName))
+    sh.open('{0}/{1}'.format(imgName))
     return
 
 

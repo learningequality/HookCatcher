@@ -1,5 +1,8 @@
 .DS_STORE
 *.pyc
-
-user_settings.py
-
+*.rdb
+*.sublime-workspace
+*.sublime-project
+HookCatcher/user_settings.py
+node_modules/
+HookCatcher/media
