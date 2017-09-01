@@ -1,0 +1,44 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}
+    spec:
+      containers:
+      # add the hash, to force helm to include upgrades to environment variables
+      - name: {{ .Chart.Name }}-{{ print $.Template.BasePath "/deployment.yaml" . | sha256sum | trunc 5 }}
+        image: "{{ .Values.image.registry }}/{{ .Values.image.org }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.internalPort }}
+        env:
+          - name: POSTGRES_PORT
+            value: "{{ .Values.postgresqlservice.port }}"
+          - name: POSTGRES_HOST
+            value: "{{ .Release.Name }}-postgresql"
+          - name: POSTGRES_USER
+            value: "{{ .Values.postgresql.postgresUser }}"
+          - name: POSTGRES_DB_NAME
+            value: "{{ .Values.postgresql.postgresDatabase }}"
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-postgresql"
+                key: postgres-password
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.service.internalPort }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.service.internalPort }}
+        resources:
+{{ toYaml .Values.resources | indent 12 }}

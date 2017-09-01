@@ -13,3 +13,5 @@ WORKDIR /HookCatcher
 
 RUN pip install -r requirements.txt
 RUN yarn install
+ENTRYPOINT ["make"]
+CMD ["rundevserver"]
