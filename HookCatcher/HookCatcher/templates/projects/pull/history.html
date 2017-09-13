@@ -1,0 +1,14 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+
+        {% load static %}
+        <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/style.css' %}"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+    {% for history_entry in history_list%}
+      <p>{{history_entry.time}}: {{history_entry.message}}</p>
+    {% endfor %}
+    </body>
+<head>

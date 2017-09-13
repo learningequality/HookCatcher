@@ -48,13 +48,13 @@ def generate_diffs(img_dict, pr_obj):
                   img_dict[img_pair][0].state.state_name,
                   img_dict[img_pair][0].state.git_commit.git_branch)
             print msg
-            History.log_sys_error(msg, pr_obj)
+            History.log_sys_error(pr_obj, msg)
         else:
             msg = 'No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.'.format(  # noqa: E501
                   img_dict[img_pair][0].state.state_name,
                   img_dict[img_pair][0].state.git_commit.git_branch)
             print msg
-            History.log_sys_error(msg, pr_obj)
+            History.log_sys_error(pr_obj, msg)
     return
 
 
@@ -65,7 +65,7 @@ def generate_diffs(img_dict, pr_obj):
 def generate_images(state_name, pr_obj):
     img_dict = defaultdict(list)  # {'key': [<ImgObj1>, <ImgObj2>], 'key2': [...}
     for single_state in state_name:  # should run two times
-        # switchBranch(singleState.git_commit.git_branch) # depricate
+        switchBranch(single_state.git_commit.git_branch)  # depricate
 
         img_list = add_screenshots(single_state)
 
@@ -81,10 +81,11 @@ def generate_images(state_name, pr_obj):
     # if there are any images
     if img_dict:
         RQ_QUEUE.enqueue(generate_diffs, img_dict, pr_obj)
+        History.log_initial_diffs(pr_obj)
     else:
         msg = 'There was no config file to determine which screenshots to generate, so none were generated'  # noqa: E501
         print msg
-        History.log_sys_error(msg, pr_obj)
+        History.log_sys_error(pr_obj, msg)
     return
 
 

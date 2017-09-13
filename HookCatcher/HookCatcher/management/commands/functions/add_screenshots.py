@@ -85,7 +85,7 @@ def browserstack(state_obj, config):
 
         # all browserstck devices --> https://www.browserstack.com/screenshots/browsers.json
         data = {"url": get_ngrok(state_obj.state_url),
-                "callback_url": "http://fdaac17c.ngrok.io/bs_callback/{0}".format(img_obj.id),
+                "callback_url": "http://fdaac17c.ngrok.io/bs_callback/{0}/".format(img_obj.id),
                 "win_res": '{0}x{1}'.format(config['desktop_resolution'][0],
                                             config['desktop_resolution'][1]),
                 "mac_res": '{0}x{1}'.format(config['desktop_resolution'][0],

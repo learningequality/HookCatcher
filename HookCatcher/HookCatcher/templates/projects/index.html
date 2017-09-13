@@ -1,0 +1,15 @@
+<html>
+    <body>
+        {% if repoList %}
+          Following Git Repos:
+
+          {% for repo in repoList %}
+            <a href="{% url 'listPR' repo.git_repo|urlencode:"" %}">
+            {{repo.git_repo}}</a>
+          {% endfor %}
+
+        {% else %}
+          There are no PRs in the database
+        {% endif %}
+    </body>
+</html>

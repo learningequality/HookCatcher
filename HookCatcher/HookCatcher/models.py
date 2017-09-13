@@ -48,6 +48,7 @@ class State(models.Model):
 @python_2_unicode_compatible
 class PR(models.Model):
     git_repo = models.CharField(max_length=200)
+    git_title = models.TextField()
     git_pr_number = models.IntegerField(unique=True)
     # BASE of the git pull request Before version of state
     # call state.gitCommit.targetCommit_set.all() to get PR's where state is used as a target
@@ -72,13 +73,6 @@ class PR(models.Model):
         # find the intersection between the two lists in case image is used in mulitple diffs
         return set(target_diff_list) & set(source_diff_list)
 
-    def num_diffs_approved(self):
-        count_approved = 0
-        for diff in self.get_diffs():
-            if diff.is_approved:
-                count_approved = count_approved + 1
-        return count_approved
-
     def __str__(self):
         return '%s: PR #%d' % (self.git_repo, self.git_pr_number)
 
@@ -101,11 +95,16 @@ class History(models.Model):
 
     # record how many diffs were generated and how many still avaliable in history
     @classmethod
-    def log_initial_diffs(cls, pr_obj, num):
-        msg = '{0} Diffs were generated, of which {1} were automatically approved'.format(
-              len(pr_obj.get_diffs), pr_obj.num_diffs_approved())
+    def log_initial_diffs(cls, pr_obj):
+        if len(pr_obj.get_diffs()) > 0:
+            approved_count = 0
+            for diff in pr_obj.get_diffs():
+                if diff.diff_percent == 0:
+                    approved_count = approved_count + 1
+            msg = '{0} Diffs were generated, of which {1} were automatically approved'.format(
+                  len(pr_obj.get_diffs()), approved_count)
 
-        cls(message=msg, pr=pr_obj).save()
+            cls(message=msg, pr=pr_obj).save()
         return
 
     # record in history when a user manually approves of a diff
@@ -196,4 +195,4 @@ class Diff(models.Model):
             # for the case when the image is not done loading yet
             return 'Diff is waiting on Images to Process...'
         else:
-            return self.diff_img_file.name
+            return '%d %s' % (self.id, self.diff_img_file.name)

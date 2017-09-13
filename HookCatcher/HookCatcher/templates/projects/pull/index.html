@@ -1,0 +1,352 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+
+        {% load static %}
+        <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/view_pr.css' %}"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    </head>
+    <body>
+      <div class="page_container">
+        <div class="user_bar">
+            <p>github_user</p>
+            <a href="/">Log out</a>
+        </div>
+
+        <div class="breadcrumbs">
+          <a href="{% url 'projects' %}">Projects</a>
+          >
+          <a href="{% url 'listPR' repo_name=repo|urlencode:"" %}">{{repo}}</a>
+          >
+          PR #{{pr.git_pr_number}}
+        </div>
+
+        <div class="pr_title">
+          <b>{{pr.git_title}} #{{pr.git_pr_number}}</b>
+        </div>
+
+        <div class="pr_approve_block">
+          <div class="approve_header">
+            <div id="approve_status">
+              {% if approved_changed_diffs|length == changed_diffs|length%}
+                &#10004; All changes approved
+              {%else%}
+                &#10060; Some changes need approval
+              {% endif %}
+            </div>
+            <div class="btn_approve_toggle">
+              {% if approved_changed_diffs|length > 0 %}
+                  <a id="reset_or_approve" href="#" onclick="javascript:approve_or_reset_all('reset')"/>Reset</a>
+              {%else%}
+                  <a id="reset_or_approve" href="#" onclick="javascript:approve_or_reset_all('approve')"/>Approve All</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="pr_approve_subblock">
+            <div class="approve_text">
+              <p id="unapproved_changes_count"> {{num_unapproved_changed_diffs}} Unapproved visual change{{num_unapproved_changed_diffs|pluralize}} </p>
+              <p> {{num_total_states}} State{{num_total_states|pluralize}} Total</p>
+            </div>
+            <div class="history_block">
+              <a href="{% url 'pr_history' repo|urlencode:"" pr.git_pr_number %}">History</a>
+              <div class="history_window">
+                {% for history in history_list%}
+                  <p>{{history.message}}</p>
+                {% endfor %}
+              </div>
+            </div>
+            <a href="https://github.com/{{repo}}/pull/{{pr.git_pr_number}}">PR on Github</a><br>
+            <a href=".">Demo Server</a>
+          </div>
+
+        </div>
+
+
+
+        <div class="diff_title">
+          <a class="diff_header" href="javascript:collapse_diff('changed_diff_container', 'changed_diff_carrot')">
+            <span id="changed_diff_carrot">&#9660;</span>
+            Changed <span id="diff_changed_ratio">({{approved_changed_diffs|length}}/{{changed_diffs|length}})</span>
+          </a>
+        </div>
+        <div class="diff_container" id="changed_diff_container">
+        {% if changed_diffs %}
+          {% for diff in changed_diffs %}
+          <div class="diff_content">
+            <div class="left_half_diff">
+              <form action="" method="post" id="approve_form">
+                {% if diff.is_approved %}
+                  <input type="checkbox" class="chkbox_approve_diff" name="approve_diff" value="{{diff.id}}" checked>Approve
+                {% else %}
+                  <input type="checkbox" class="chkbox_approve_diff" name="approve_diff" value="{{diff.id}}">Approve
+                {% endif %}
+              </form>
+              <div class="diff_description">
+                <p>State Name: <span>{{diff.target_img.state.state_name}}</span></p>
+                {% if diff.target_img.state.state_url ==  diff.source_img.state.state_url%}
+                  <p>URL: <span>{{diff.target_img.state.state_url}}</span></p>
+                {% else %}
+                  <p>Before URL: <span>{{diff.target_img.state.state_url}}</span></p>
+                  <p>After URL: <span>{{diff.source_img.state.state_url}}</span></p>
+                {% endif %}
+                <p>Resolution: <span>{{diff.target_img.device_res_width}}x{{diff.target_img.device_res_height}}</span></p>
+              </div>
+            </div>
+            <div class="right_half_diff">
+              <div class="diff_row">
+
+                <div class="diff_img_container">
+                  <img src="{{ diff.target_img.img_file.url }}">
+                  <p>Before</p>
+                </div>
+                <div class="diff_img_container">
+                  <img src="{{ diff.diff_img_file.url }}">
+                  <p>Diff</p>
+                </div>
+                <div class="diff_img_container">
+                  <img src="{{ diff.source_img.img_file.url }}">
+                  <p>After</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          There were no changed Diffs
+        {% endif %}
+        </div>
+
+
+        <div class="diff_title">
+          <a class="diff_header" href="javascript:collapse_diff('new_diff_container', 'new_diff_carrot')">
+            <span id="new_diff_carrot">&#9654;</span>
+            New ({{new_diffs|length}})
+          </a>
+        </div>
+        <div class="diff_container" id="new_diff_container" style="display:none"  >
+        {% if new_diffs %}
+          {% for image in new_diffs %}
+          <div class="diff_content">
+            <div class="left_half_diff">
+              <div class="diff_description">
+                <p>State Name: <span>{{image.state.state_name}}</span></p>
+                <p>URL: <span>{{image.state.state_url}}</span></p>
+                <p>Resolution: <span>{{image.device_res_width}}x{{image.device_res_height}}</span></p>
+              </div>
+            </div>
+            <div class="right_half_diff">
+              <div class="diff_row">
+                <div class="img_container">
+                  <img src="{{ image.img_file.url }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          There were no new Diffs
+        {% endif %}
+        </div>
+
+        <div class="diff_title">
+          <a class="diff_header" href="javascript:collapse_diff('deleted_diff_container', 'deleted_diff_carrot')">
+            <span id="deleted_diff_carrot">&#9654;</span>
+            Deleted ({{deleted_diffs|length}})
+          </a>
+        </div>
+        <div class="diff_container" id="deleted_diff_container" style="display:none">
+        {% if deleted_diffs %}
+          {% for image in deleted_diffs %}
+          <div class="diff_content">
+            <div class="left_half_diff">
+              <div class="diff_description">
+                <p>State Name: <span>{{image.state.state_name}}</span></p>
+                <p>URL: <span>{{image.state.state_url}}</span></p>
+                <p>Resolution: <span>{{image.device_res_width}}x{{image.device_res_height}}</span></p>
+              </div>
+            </div>
+            <div class="right_half_diff">
+              <div class="diff_row">
+                <div class="img_container">
+                  <img src="{{ image.img_file.url }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          There were no deleted Diffs
+        {% endif %}
+        </div>
+
+
+        <div class="diff_title">
+          <a class="diff_header" href="javascript:collapse_diff('unchanged_diff_container', 'unchanged_diff_carrot')">
+          <span id="unchanged_diff_carrot">&#9654;</span>
+          Unchanged ({{unchanged_diffs|length}}/{{unchanged_diffs|length}})
+          </a>
+        </div>
+        <div class="diff_container" id="unchanged_diff_container" style="display:none">
+        {% if unchanged_diffs %}
+          {% for diff in unchanged_diffs %}
+          <div class="diff_content">
+            <div class="left_half_diff">
+              <div class="diff_description">
+                <p>State Name: <span>{{diff.target_img.state.state_name}}</span></p>
+                {% if diff.target_img.state.state_url ==  diff.source_img.state.state_url%}
+                  <p>URL: <span>{{diff.target_img.state.state_url}}</span></p>
+                {% else %}
+                  <p>Before URL: <span>{{diff.target_img.state.state_url}}</span></p>
+                  <p>After URL: <span>{{diff.source_img.state.state_url}}</span></p>
+                {% endif %}
+                <p>Resolution: <span>{{diff.target_img.device_res_width}}x{{diff.target_img.device_res_height}}</span></p>
+              </div>
+            </div>
+            <div class="right_half_diff">
+              <div class="diff_row">
+
+                <div class="diff_img_container">
+                  <img src="{{ diff.target_img.img_file.url }}">
+                  <p>Before</p>
+                </div>
+                <div class="diff_img_container">
+                  <img src="{{ diff.diff_img_file.url }}">
+                  <p>Diff</p>
+                </div>
+                <div class="diff_img_container">
+                  <img src="{{ diff.source_img.img_file.url }}">
+                  <p>After</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          There were no unchanged Diffs
+        {% endif %}
+        </div>
+    </div>
+    <script>
+    function collapse_diff(showHideDiv, toggleCarrot) {
+      var ele = document.getElementById(showHideDiv);
+      var carrot = document.getElementById(toggleCarrot);
+      if(ele.style.display == "none") {
+        ele.style.display = "block";
+        carrot.innerHTML = "&#9660;";
+      }
+      else {
+        ele.style.display = "none";
+        carrot.innerHTML = "&#9654;";
+      }
+    }
+
+    function csrfSafeMethod(method) {
+        // these HTTP methods do not require CSRF protection
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    }
+
+    // Helper method for certifying crsf
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = jQuery.trim(cookies[i]);
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    function approve_or_reset_all(toggle) {
+      var csrftoken = getCookie('csrftoken');
+      if (toggle != 'reset' && toggle != 'approve'){
+        console.log(toggle + ' is not a valid option internal code error');
+        return
+      }
+
+      $.ajaxSetup({
+          beforeSend: function(xhr, settings) {
+              if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                  xhr.setRequestHeader("X-CSRFToken", csrftoken);
+              }
+          }
+      });
+      $.ajax({
+        data: {'reset_or_approve': toggle,
+               'pr_number': {{pr.git_pr_number}} },
+        type: 'POST',
+        url: {% url 'approve_or_reset_diffs' %},
+        success: function(response){
+          window.location.href = response.url;
+        },
+        error: function(e){
+          console.log('error in ajax request for reset');
+        }
+      });
+    }
+
+    $(document).ready(function(){
+      var csrftoken = getCookie('csrftoken');
+      $.ajaxSetup({
+          beforeSend: function(xhr, settings) {
+              if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                  xhr.setRequestHeader("X-CSRFToken", csrftoken);
+              }
+          }
+      });
+      $('.chkbox_approve_diff').click(function(){
+        $.ajax({
+          data: {'diff_id': $(this).prop('value'),
+                 'pr_number': {{pr.git_pr_number}}},
+          type: 'POST',
+          url: {% url 'approve_diff' %},
+          success: function(response){
+            // Dynamically change the labels showing diff approvals as you check the approve checkboxes
+            var approved_changes = response.num_approved_changes;
+            var total_changes = response.num_total_changes;
+
+            if (approved_changes == total_changes) {
+              document.getElementById('approve_status').innerHTML = '&#10004; All changes approved';
+            }else{
+              document.getElementById('approve_status').innerHTML = '&#10060; Some changes need approval';
+            }
+
+            if (approved_changes > 0) {
+              $('reset_or_approve').attr('onclick', "javascript:approve_or_reset_all('reset')");
+              document.getElementById('reset_or_approve').innerHTML = 'Reset'
+            }else {
+              $('reset_or_approve').attr('onclick', "javascript:approve_or_reset_all('approve')");
+              document.getElementById('reset_or_approve').innerHTML = 'Approve All'
+
+            }
+
+            var unapproved_changes = total_changes - approved_changes;
+            if (unapproved_changes == 1){
+              document.getElementById('unapproved_changes_count').innerHTML = unapproved_changes + ' Unapproved visual change'
+            }else {
+              document.getElementById('unapproved_changes_count').innerHTML = unapproved_changes + ' Unapproved visual changes'
+            }
+
+
+            var string_diff_changed_ratio = '(' + approved_changes + '/' + total_changes + ')';
+            document.getElementById('diff_changed_ratio').innerHTML = string_diff_changed_ratio;
+
+
+          },
+          error: function(e){
+            console.log('error in ajax request when approving diff');
+          }
+        });
+      });
+    });
+    </script>
+    </body>
+</html>

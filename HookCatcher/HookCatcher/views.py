@@ -1,5 +1,6 @@
 import json
 import os
+import urllib
 
 import django_rq
 import requests
@@ -7,6 +8,7 @@ from django.conf import settings  # database dir
 from django.core.management import call_command  # call newPR update command
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
@@ -95,8 +97,12 @@ def gitCommitInfo(gitSHA):
 
 
 def index(request):
+    return render(request, 'index.html')
+
+
+def projects(request):
     unique_repos = Commit.objects.order_by().values('git_repo').distinct()
-    return render(request, 'index.html', {
+    return render(request, 'projects/index.html', {
         'repoList': unique_repos,
     })
 
@@ -114,11 +120,13 @@ def singleBranch(request, branch_name, commitSHA):
     })
 
 
-def listPR(request, git_repo=""):
-    pr_list = PR.objects.filter(git_repo=git_repo).order_by('-git_pr_number')
+def listPR(request, repo_name):
+    repo_name = urllib.unquote(repo_name)
+    pr_list = PR.objects.filter(git_repo=repo_name).order_by('-git_pr_number')
+
     return render(request, 'compare/index.html', {
         'prList': pr_list,
-        'gitRepo': git_repo
+        'gitRepo': repo_name
     })
 
 
@@ -166,7 +174,7 @@ def get_diff_images(head_state, base_state, width, height):
 
 
 # retrieve all states with a matching PR number
-def singlePR(request, pr_number, repo_name="MingDai/kolibri", res_width="0", res_height="0"):
+def singlePR(request, pr_number, repo_name="", res_width="0", res_height="0"):
     diff_dict_list = []  # final output of a list of diffs for the particular PR
     res_dict_list = []  # final output of a list of dictionaries that represent resolutions
 
@@ -215,6 +223,82 @@ def singlePR(request, pr_number, repo_name="MingDai/kolibri", res_width="0", res
         'diff_dict_list': diff_dict_list,
         'res_dict_list': res_dict_list,
     })
+
+
+# The main page for viewing diffs.
+def view_pr(request, repo_name, pr_number):
+    repo_name = urllib.unquote(repo_name)
+    pr_obj = PR.objects.get(git_pr_number=pr_number)
+
+    changed_diffs = []
+    unchanged_diffs = []
+
+    for diff in pr_obj.get_diffs():
+        if diff.diff_percent > 0:
+            changed_diffs.append(diff)
+        else:
+            unchanged_diffs.append(diff)
+
+    approved_changed_diffs = []
+    for diff in changed_diffs:
+        if diff.is_approved:
+            approved_changed_diffs.append(diff)
+
+    # get a list of images that do not have a diff of with the other commit of the pr
+
+    # out of all the images on the source, find all that
+    # do not have a diff image with the target commit
+    new_diffs = []  # screenshots forom source_commit (head) only
+    for image in pr_obj.git_source_commit.get_images():
+        if len(image.source_img_in_Diff.all()) < 1:
+            new_diffs.append(image)
+        else:
+            # find all the diffs this image is related to find if it has any diffs
+            # with matching source and target git_commits with the pr_obj
+            is_new_diff = True
+            for diff in image.source_img_in_Diff.all():
+                # if the diff has a target and source of the pr then it isn't new
+                if diff.target_img.state.git_commit == pr_obj.git_target_commit:
+                    is_new_diff = False
+            if is_new_diff:
+                new_diffs.append(image)
+
+    deleted_diffs = []  # screenshots forom target_commit (base) only
+    for image in pr_obj.git_target_commit.get_images():
+        if len(image.target_img_in_Diff.all()) < 1:
+            deleted_diffs.append(image)
+        else:
+            # find all the diffs this image is related to find if it has any diffs
+            # with matching source and target git_commits with the pr_obj
+            is_deleted_diff = True
+            for diff in image.target_img_in_Diff.all():
+                # if the diff has a target and source of the pr then it isn't new
+                if diff.source_img.state.git_commit == pr_obj.git_source_commit:
+                    is_deleted_diff = False
+            if is_deleted_diff:
+                deleted_diffs.append(image)
+
+    num_total_states = len(changed_diffs) + len(unchanged_diffs) + len(new_diffs) + len(deleted_diffs)  # noqa: E501
+    return render(request, 'projects/pull/index.html', {
+            'repo': repo_name,
+            'pr': pr_obj,
+            'history_list': pr_obj.history_set.all(),
+            'changed_diffs': changed_diffs,
+            'approved_changed_diffs': approved_changed_diffs,
+            'unchanged_diffs': unchanged_diffs,
+            'new_diffs': new_diffs,
+            'deleted_diffs': deleted_diffs,
+            'num_total_states': num_total_states,
+            'num_unapproved_changed_diffs': len(changed_diffs) - len(approved_changed_diffs),
+
+        })
+
+
+def pr_history(request, repo_name, pr_number):
+    pr_obj = PR.objects.get(git_pr_number=pr_number)
+    return render(request, 'projects/pull/history.html', {
+            'history_list': pr_obj.history_set.all(),
+        })
 
 
 # retrieve all states with a matching PR number
@@ -283,3 +367,72 @@ def browserstack_callback(request, img_id):
                                                    diff.target_img.img_file.name,
                                                    diff.source_img.img_file.name)
     return HttpResponse(status=200)
+
+
+@require_POST
+def approve_diff(request):
+    if request.is_ajax():
+        diff_obj_id = request.POST.get('diff_id', -1)
+        try:
+            d = Diff.objects.get(id=diff_obj_id)
+        except Diff.DoesNotExist:
+            # For some reason the Diff was deleted or there was a Javascript checkbox error
+            return HttpResponse(status=500)
+        # toggle the diff.is_approved
+        d.is_approved = not d.is_approved
+        d.save()
+
+        # get an updated number of approved changed diffs
+        pr_obj = PR.objects.get(git_pr_number=request.POST['pr_number'])
+
+        changed_diffs = []
+        for diff in pr_obj.get_diffs():
+            if diff.diff_percent > 0:
+                changed_diffs.append(diff)
+
+        approved_changed_diffs = []
+        for diff in changed_diffs:
+            if diff.is_approved:
+                approved_changed_diffs.append(diff)
+
+        ajax_reply = {'num_approved_changes': len(approved_changed_diffs),
+                      'num_total_changes': len(changed_diffs)}
+
+        return HttpResponse(json.dumps(ajax_reply), content_type='application/json')
+    else:
+        # the request was not in the expect form of an Ajax request
+        return HttpResponse(status=400)
+
+
+# api url from reset/Approve All button on view_diff page
+@require_POST
+def approve_or_reset_diffs(request):
+    # get list of changed diffs set, set is_approved=true
+    if request.is_ajax():
+        pr_obj = PR.objects.get(git_pr_number=request.POST['pr_number'])
+
+        if request.POST['reset_or_approve'] == 'approve':
+            for diff in pr_obj.get_diffs():
+                # only approve diffs with changes
+                if diff.diff_percent > 0:
+                    diff.is_approved = True
+                    diff.save()
+
+            url = reverse('view_pr', kwargs={'repo_name': urllib.quote_plus(pr_obj.git_repo),
+                                             'pr_number': pr_obj.git_pr_number})
+            reply = {'url': url}
+            return HttpResponse(json.dumps(reply), content_type='application/json')
+
+        elif request.POST['reset_or_approve'] == 'reset':
+            # get list of changed diffs set, set is_approved=False
+            for diff in pr_obj.get_diffs():
+                # only approve diffs with changes
+                if diff.diff_percent > 0:
+                    diff.is_approved = False
+                    diff.save()
+            url = reverse('view_pr', kwargs={'repo_name': urllib.quote_plus(pr_obj.git_repo),
+                                             'pr_number': pr_obj.git_pr_number})
+            reply = {'url': url}
+            return HttpResponse(json.dumps(reply), content_type='application/json')
+
+    return HttpResponse(status=500)

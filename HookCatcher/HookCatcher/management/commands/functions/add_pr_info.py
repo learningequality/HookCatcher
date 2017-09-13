@@ -137,13 +137,14 @@ def add_pr_info(prnumber_payload):
     headCommitObj = saveCommit(headRepoName, headBranchName, specificPR['head']['sha'])
 
     # This pr object may never get saved into the database if there
-    temp_pr_object = PR(git_repo=baseRepoName,
-                        git_pr_number=specificPR['number'],
-                        git_target_commit=baseCommitObj,
-                        git_source_commit=headCommitObj)
-
-    saveStates(baseCommitObj, temp_pr_object)
-    saveStates(headCommitObj, temp_pr_object)
+    pr_object = PR(git_repo=baseRepoName,
+                   git_title=specificPR['title'],
+                   git_pr_number=specificPR['number'],
+                   git_target_commit=baseCommitObj,
+                   git_source_commit=headCommitObj)
+    pr_object.save()
+    saveStates(baseCommitObj, pr_object)
+    saveStates(headCommitObj, pr_object)
 
     # returns a dictionary of states that were added {'stateName1': (baseVers, headVers), ...}
     # this list is to be sent to screenshot generator to be taken screenshot of
@@ -162,16 +163,16 @@ def add_pr_info(prnumber_payload):
 
         # if this PR doesn't exist in the database yet
     if(PR.objects.filter(git_pr_number=specificPR['number']).count() > 0):
-        pr_object = PR.objects.get(git_pr_number=specificPR['number'])
-        if (baseCommitObj.git_hash != pr_object.git_target_commit.git_hash or
-           headCommitObj.git_hash != pr_object.git_source_commit.git_hash):
+        old_pr_object = PR.objects.get(git_pr_number=specificPR['number'])
+        if (baseCommitObj.git_hash != old_pr_object.git_target_commit.git_hash or
+           headCommitObj.git_hash != old_pr_object.git_source_commit.git_hash):
             print('New changes detected in PR #{0} Git Repo: "{1}/{2}"'.format(specificPR['number'],
                                                                                baseRepoName,
                                                                                baseBranchName))
-            new_commit_old_pr(pr_object, baseStatesList, headStatesList)
-            pr_object.git_target_commit = baseCommitObj
-            pr_object.git_source_commit = headCommitObj
-            pr_object.save()
+            new_commit_old_pr(old_pr_object, baseStatesList, headStatesList)
+            old_pr_object.git_target_commit = baseCommitObj
+            old_pr_object.git_source_commit = headCommitObj
+            old_pr_object.save()
 
             # new_commit_old_pr already handles all the logic needed so don't go to diffs from pr
             sys.exit(0)
@@ -181,8 +182,6 @@ def add_pr_info(prnumber_payload):
                                                                              baseBranchName))
     else:  # absolutely new PR is being added to models
         # save information into the PR model
-        pr_object = temp_pr_object
-        pr_object.save()
         print("Successfully added PR {0}".format(specificPR['number']))
 
     # newStatesDict = {'statename': (headObj, baseObj), 'statename1'...}

@@ -22,11 +22,11 @@
                     <div class="dropdown">
                         <button onclick="toggleDropdown()" class="menuButtons btnDropdown">Change Resolutions</button>
                         <div id="resDropdown" class="resDropdown">
-                            <a href="{% url 'singlePR' pr_number=PR.git_pr_number %}">
+                            <a href="{% url 'singlePR' repo_name='MingDai/kolibr' pr_number=PR.git_pr_number %}">
                                 All
                             </a>
                             {% for res in res_dict_list %}
-                                <a href="{% url 'singlePR' pr_number=PR.git_pr_number res_width=res.width res_height=res.height %}">
+                                <a href="{% url 'singlePR' repo_name='MingDai/kolibri' pr_number=PR.git_pr_number res_width=res.width res_height=res.height %}">
                                     {{res.width}}x{{res.height}}
                                 </a>
                             {% endfor %}

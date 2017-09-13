@@ -5,9 +5,10 @@ html, body
     margin: 0;
 }
 
-div
+div, p
 {
     box-sizing: border-box;
+    margin: 0;
 }
 
 table, tr

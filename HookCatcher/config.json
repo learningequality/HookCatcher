@@ -18,7 +18,7 @@
         }
     },
     {
-        "id": "browserstack",
+        "id": "NOTUSING_browserstack",
         "config": {
             "desktop_resolution": [1024, 768],
             "device_resolution": [2048, 1536],
