@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import PR, Commit, Diff, History, Image, State
+from .models import PR, Commit, Diff, History, Image, Profile, State
 
 
 # display the UUID field in the django admin
@@ -26,4 +26,5 @@ admin.site.register(Image, ImageAdmin)
 admin.site.register(Diff)
 admin.site.register(Commit)
 admin.site.register(PR)
+admin.site.register(Profile)
 admin.site.register(History, HistoryAdmin)

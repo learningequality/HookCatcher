@@ -45,8 +45,8 @@ def imagemagick(img1_path, img2_path, diff_name="", diff_obj=None):
         try:
             # Diff screenshot name using whole path to reference images
             sh.compare('-metric', 'RMSE', img1_path, img2_path, temp_diff.name)
-        # imagemagick outputs the diff percentage in std.err, will run exception everytime
-        # NOTE: Exception ONLY when there is a percent diff > 0 and successfully ran
+        # imagemagick outputs the diff percentage in std.err
+        # NOTE: will raise Exception ONLY when there is a percent diff > 0 and successfully ran
         except sh.ErrorReturnCode_1, e:
             diffOutput = e.stderr
 
@@ -57,6 +57,8 @@ def imagemagick(img1_path, img2_path, diff_name="", diff_obj=None):
 
             if diff_obj and not diff_name == '':
                 diff_obj.diff_percent = diff_percent
+                if diff_obj.diff_percent == 0:
+                    diff_obj.is_approved = True
                 diff_obj.diff_img_file.save(diff_name, temp_diff, save=True)
                 print('Finished adding new Diff named: "{0}"'.format(diff_obj.diff_img_file.path))
     return diff_percent

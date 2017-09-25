@@ -15,7 +15,6 @@ import os
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
 
@@ -116,41 +115,41 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media').replace('\\', '/')
 MEDIA_URL = '/media/'
 
 
-# Load user specific settings saved in a separate file
-# try:
-#     execfile(os.path.join(BASE_DIR, "user_envs.py"), globals(), locals())
-# except NameError:
-#     with open(os.path.join(BASE_DIR, "user_envs.py")) as f:
-#         code = compile(f.read(), os.path.join(BASE_DIR, "user_envs.py"), 'exec')
-#         exec(code, globals(), locals())
-# except IOError:
-#     pass
-
-
 # --- GET ALL THE OTHER ENV VARIABLES ---
-GIT_REPO = os.getenv('GIT_REPO')    # the Github Repository you are attempting to link to
+# GIT_REPO = os.getenv('GIT_REPO')    # the Github Repository you are attempting to link to
 
-GIT_OAUTH = os.getenv('GIT_OAUTH')  # your Github Access Token
+# GIT_OAUTH = os.getenv('GIT_OAUTH')  # your Github Access Token
 
-# the name of the directory in the Git Repository that stores the state representation JSON files.
-STATES_FOLDER = os.getenv('STATES_FOLDER')
+# # the name of the directory in the Git Repository that stores the state representation JSON files.
+# STATES_FOLDER = os.getenv('STATES_FOLDER')
 
-# Local file path of the directory being pointed to used to switch branches (depreicated)
-WORKING_DIR = os.getenv('WORKING_DIR') or ''
+# # Local file path of the directory being pointed to used to switch branches (depreicated)
+# WORKING_DIR = os.getenv('WORKING_DIR') or ''
 
-# File to set what specific screenshot settings you want
-SCREENSHOT_CONFIG = os.getenv('SCREENSHOT_CONFIG')
+# # File to set what specific screenshot settings you want
+# SCREENSHOT_CONFIG = os.getenv('SCREENSHOT_CONFIG')
 
-# browser stack api username
-BROWSERSTACK_USERNAME = os.getenv('BROWSERSTACK_USERNAME') or ''
+# # browser stack api username
+# BROWSERSTACK_USERNAME = os.getenv('BROWSERSTACK_USERNAME') or ''
 
-# browser stack api authentication *need subscription*
-BROWSERSTACK_OAUTH = os.getenv('BROWSERSTACK_OAUTH') or ''
+# # browser stack api authentication *need subscription*
+# BROWSERSTACK_OAUTH = os.getenv('BROWSERSTACK_OAUTH') or ''
 
 # try to get the env variable for Postgres port
 POSTGRES_PORT = os.getenv('POSTGRES_PORT')
 if not POSTGRES_PORT:
     POSTGRES_PORT = 5432
+
+
+# Load user specific settings saved in a separate file
+try:
+    execfile(os.path.join(BASE_DIR, "user_settings.py"), globals(), locals())
+except NameError:
+    with open(os.path.join(BASE_DIR, "user_settings.py")) as f:
+        code = compile(f.read(), os.path.join(BASE_DIR, "user_settings.py"), 'exec')
+        exec(code, globals(), locals())
+except IOError:
+    pass
 
 # Database
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases

@@ -72,6 +72,7 @@ def new_commit_old_pr(pr_obj, new_base_states, new_head_states):
                     old_img_path = old_img_obj.get_image_location()
                     new_img_path = new_img_obj.get_image_location()
 
+                    # Delete a redundant image same image saved in different locations
                     # make sure not to delete yourself if the two images are the same
                     if old_img_path != new_img_path:
                         imagemagick_result = imagemagick(old_img_path, new_img_path)
@@ -87,8 +88,9 @@ def new_commit_old_pr(pr_obj, new_base_states, new_head_states):
                                     os.removedirs(os.path.dirname(new_img_path))
                                 except OSError:  # IGNORE: will error when parent dir is not empty
                                     pass
-                            # use an existing local file for the new image
+                            # use an old local file location and approve values for the new image
                             new_img_obj.img_file = old_img_obj.img_file
+                            new_img_obj.is_approved = old_img_obj.is_approved
                             new_img_obj.save()
                 # else if one of the images is rendering,
                 # the callback function should handle this diffing

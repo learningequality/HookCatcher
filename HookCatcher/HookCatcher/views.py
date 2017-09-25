@@ -5,15 +5,18 @@ import urllib
 import django_rq
 import requests
 from django.conf import settings  # database dir
+from django.contrib.auth import login as login_auth
+from django.contrib.auth import logout as logout_auth
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from django.core.management import call_command  # call newPR update command
 from django.http import HttpResponse
-from django.shortcuts import render
-from django.urls import reverse
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
-from .models import PR, Commit, Diff, Image, State
+from .models import PR, Commit, Diff, Image, Profile, State
 
 
 # representation for models so you don't have to change every value for models in every template
@@ -78,6 +81,29 @@ def gitCommitRepresentation(git_info):
     }
 
 
+# retrieve all states with a matching PR number
+def singleCommit(request, gitCommitSHA):
+    commitObj = Commit.objects.filter(gitHash=gitCommitSHA)
+    states = State.objects.get(gitCommit=commitObj)
+
+    formattedStates = [state_representation(state) for state in states]
+
+    gitInfo = gitCommitInfo(commitObj.gitHash)
+    return render(request, 'state/detail.html', {
+        'statesList': formattedStates,
+        'gitCommit': gitInfo,
+    })
+
+
+# retrieve all states from State model
+def allStates(request):
+    allStates = State.objects.all()
+    formattedStates = [state_representation(state) for state in allStates]
+    return render(request, 'state/index.html', {
+        'statesList': formattedStates,
+    })
+
+
 # get request to github API
 def gitCommitInfo(gitSHA):
     GIT_HEADER = {
@@ -96,11 +122,23 @@ def gitCommitInfo(gitSHA):
         return gitCommitRepresentation(gitCommitObj)
 
 
-def index(request):
-    return render(request, 'index.html')
+def login(request, failed_attempt=False):
+    if failed_attempt == 'False':
+        failed_attempt = False
+    return render(request, 'login.html', {
+            'failed_attempt': failed_attempt,
+    })
+
+
+def register(request):
+    return render(request, 'register.html')
 
 
 def projects(request):
+    print request.user
+    print request.user.is_authenticated
+    print request.session.get('client_id', 'no login')
+
     unique_repos = Commit.objects.order_by().values('git_repo').distinct()
     return render(request, 'projects/index.html', {
         'repoList': unique_repos,
@@ -225,109 +263,202 @@ def singlePR(request, pr_number, repo_name="", res_width="0", res_height="0"):
     })
 
 
-# The main page for viewing diffs.
-def view_pr(request, repo_name, pr_number):
-    repo_name = urllib.unquote(repo_name)
-    pr_obj = PR.objects.get(git_pr_number=pr_number)
-
+# Helper function that returns all types of diffs from a PR
+# types of diffs: changed_diffs, unchanged_diffs, deleted_diffs, new_diffs
+# USED in view_pr controller and approve_pr api point
+def get_all_diff_types_from_pr(pr_obj):
     changed_diffs = []
-    unchanged_diffs = []
+    approved_changed_diffs = []
 
+    unchanged_diffs = []
+    approved_unchanged_diffs = []
     for diff in pr_obj.get_diffs():
         if diff.diff_percent > 0:
             changed_diffs.append(diff)
+            if diff.is_approved:
+                approved_changed_diffs.append(diff)
         else:
             unchanged_diffs.append(diff)
+            if diff.is_approved:
+                approved_unchanged_diffs.append(diff)
 
-    approved_changed_diffs = []
-    for diff in changed_diffs:
-        if diff.is_approved:
-            approved_changed_diffs.append(diff)
+    # screenshots with state defined in source_commit (head) only
+    new_diffs = pr_obj.get_new_states_images()
+    approved_new_diffs = []
+    for image in new_diffs:
+        if image.is_approved:
+            approved_new_diffs.append(image)
 
-    # get a list of images that do not have a diff of with the other commit of the pr
+    # screenshots forom target_commit (base) only
+    deleted_diffs = pr_obj.get_deleted_states_images()
+    approved_deleted_diffs = []
+    for image in deleted_diffs:
+        if image.is_approved:
+            approved_deleted_diffs.append(image)
 
-    # out of all the images on the source, find all that
-    # do not have a diff image with the target commit
-    new_diffs = []  # screenshots forom source_commit (head) only
-    for image in pr_obj.git_source_commit.get_images():
-        if len(image.source_img_in_Diff.all()) < 1:
-            new_diffs.append(image)
-        else:
-            # find all the diffs this image is related to find if it has any diffs
-            # with matching source and target git_commits with the pr_obj
-            is_new_diff = True
-            for diff in image.source_img_in_Diff.all():
-                # if the diff has a target and source of the pr then it isn't new
-                if diff.target_img.state.git_commit == pr_obj.git_target_commit:
-                    is_new_diff = False
-            if is_new_diff:
-                new_diffs.append(image)
+    all_states = changed_diffs + unchanged_diffs + new_diffs + deleted_diffs
+    all_approved_states = (approved_changed_diffs + approved_unchanged_diffs +
+                           approved_new_diffs + approved_deleted_diffs)
 
-    deleted_diffs = []  # screenshots forom target_commit (base) only
-    for image in pr_obj.git_target_commit.get_images():
-        if len(image.target_img_in_Diff.all()) < 1:
-            deleted_diffs.append(image)
-        else:
-            # find all the diffs this image is related to find if it has any diffs
-            # with matching source and target git_commits with the pr_obj
-            is_deleted_diff = True
-            for diff in image.target_img_in_Diff.all():
-                # if the diff has a target and source of the pr then it isn't new
-                if diff.source_img.state.git_commit == pr_obj.git_source_commit:
-                    is_deleted_diff = False
-            if is_deleted_diff:
-                deleted_diffs.append(image)
+    return {'changed':
+            {'all': changed_diffs,
+             'approved': approved_changed_diffs,
+             'unapproved': set(changed_diffs).symmetric_difference(approved_changed_diffs)
+             },
+            'unchanged':
+            {'all': unchanged_diffs,
+             'approved': approved_unchanged_diffs,
+             'unapproved': set(unchanged_diffs).symmetric_difference(approved_unchanged_diffs)
+             },
+            'new':
+            {'all': new_diffs,
+             'approved': approved_new_diffs,
+             'unapproved': set(new_diffs).symmetric_difference(approved_new_diffs)
+             },
+            'deleted':
+            {'all': deleted_diffs,
+             'approved': approved_deleted_diffs,
+             'unapproved': set(deleted_diffs).symmetric_difference(approved_deleted_diffs)
+             },
+            'total_states':
+            {'all': all_states,
+             'approved': all_approved_states,
+             'unapproved': set(all_states).symmetric_difference(all_approved_states)
+             }
+            }
 
-    num_total_states = len(changed_diffs) + len(unchanged_diffs) + len(new_diffs) + len(deleted_diffs)  # noqa: E501
-    return render(request, 'projects/pull/index.html', {
-            'repo': repo_name,
-            'pr': pr_obj,
-            'history_list': pr_obj.history_set.all(),
-            'changed_diffs': changed_diffs,
-            'approved_changed_diffs': approved_changed_diffs,
-            'unchanged_diffs': unchanged_diffs,
-            'new_diffs': new_diffs,
-            'deleted_diffs': deleted_diffs,
-            'num_total_states': num_total_states,
-            'num_unapproved_changed_diffs': len(changed_diffs) - len(approved_changed_diffs),
 
-        })
+# The main page for viewing diffs.
+def view_pr(request, repo_name, pr_number):
+    if request.user.is_authenticated:
+        repo_name = urllib.unquote(repo_name)
+        pr_obj = PR.objects.get(git_pr_number=pr_number)
+
+        diff_types = get_all_diff_types_from_pr(pr_obj)
+
+        return render(request, 'projects/pull/view_pr.html', {
+                    'user': request.user.username,
+                    'repo': repo_name,
+                    'pr': pr_obj,
+                    'history_list': pr_obj.history_set.all(),
+
+                    'changed_diffs': diff_types['changed']['all'],
+                    'approved_changed_diffs': diff_types['changed']['approved'],
+                    'num_unapproved_changed_diffs': len(diff_types['changed']['unapproved']),
+
+                    'unchanged_diffs': diff_types['unchanged']['all'],
+                    'approved_unchanged_diffs': diff_types['unchanged']['approved'],
+                    'num_unapproved_unchanged_diffs': len(diff_types['unchanged']['unapproved']),
+
+                    'new_diffs': diff_types['new']['all'],
+                    'approved_new_diffs': diff_types['new']['approved'],
+                    'num_unapproved_new_diffs': diff_types['new']['unapproved'],
+
+                    'deleted_diffs': diff_types['deleted']['all'],
+                    'approved_deleted_diffs': diff_types['deleted']['approved'],
+                    'num_unapproved_deleted_diffs': len(diff_types['deleted']['unapproved']),
+
+                    'num_total_states': len(diff_types['total_states']['all']),
+                    'num_total_approved_states': len(diff_types['total_states']['approved']) - len(diff_types['unchanged']['approved']),  # noqa: E501
+                    'num_total_unapproved_states': len(diff_types['total_states']['unapproved']),
+                })
+    else:
+        return redirect('login')
 
 
 def pr_history(request, repo_name, pr_number):
     pr_obj = PR.objects.get(git_pr_number=pr_number)
     return render(request, 'projects/pull/history.html', {
-            'history_list': pr_obj.history_set.all(),
-        })
+                'history_list': pr_obj.history_set.all(),
+            })
 
 
-# retrieve all states with a matching PR number
-def singleCommit(request, gitCommitSHA):
-    commitObj = Commit.objects.filter(gitHash=gitCommitSHA)
-    states = State.objects.get(gitCommit=commitObj)
+def git_oauth_callback(request):
+    if 'client_id' in request.session and 'client_secret' in request.session \
+       and 'password' in request.session:
+        url = 'https://github.com/login/oauth/access_token'
+        data = {'client_id': request.session.get('client_id', ''),
+                'client_secret': request.session.get('client_secret', ''),
+                'code': request.GET['code']}
 
-    formattedStates = [state_representation(state) for state in states]
+        headers = {'Accept': 'application/json'}
 
-    gitInfo = gitCommitInfo(commitObj.gitHash)
-    return render(request, 'state/detail.html', {
-        'statesList': formattedStates,
-        'gitCommit': gitInfo,
-    })
+        git_oauth_reply = requests.post(url, data=data, headers=headers)
+        if (git_oauth_reply.status_code == 200 or
+           json.loads(git_oauth_reply.text)['access_token'] == 'bad_verification_code'):
+
+            token = json.loads(git_oauth_reply.text)['access_token']
+            user_info_url = 'https://api.github.com/user?access_token={0}'.format(token)
+            git_user_info = requests.get(url=user_info_url, headers=headers)
+
+            username = json.loads(git_user_info.text)['login']
+            password = request.session['password']
+
+            if username and User.objects.filter(username=username).count() < 1:
+                user_obj = User.objects.create_user(username=username,
+                                                    password=password,
+                                                    email=request.session.get('email', ''),
+                                                    first_name=request.session.get('first_name', ''),  # noqa: E501
+                                                    last_name=request.session.get('last_name', ''))
+
+                Profile.objects.create(user=user_obj,
+                                       git_client_id=request.session.get('client_id', ''),
+                                       git_client_secret=request.session.get('client_secret', ''),
+                                       git_access_token=token)
+                # delete all the sessions except for username since the rest will be not used
+                try:
+                    del request.session['client_id']
+                    del request.session['client_secret']
+                    del request.session['first_name']
+                    del request.session['last_name']
+                    del request.session['email']
+                    del request.session['password']
+                except KeyError:
+                    pass
+                request.session['username'] = username
+                return redirect('projects')
+            else:
+                raise RuntimeError('This Github User Profile already exists')
+    raise RuntimeError('ERROR there was a problem in the github authentication process')
 
 
-# retrieve all states from State model
-def allStates(request):
-    allStates = State.objects.all()
-    formattedStates = [state_representation(state) for state in allStates]
-    return render(request, 'state/index.html', {
-        'statesList': formattedStates,
-    })
+def api_logout(request):
+    logout_auth(request)
+    return redirect('login')
+
+
+@require_POST
+def api_login(request):
+    user = authenticate(username=request.POST['username'],
+                        password=request.POST['password'])
+    if user is not None:
+        login_auth(request, user)
+        return redirect('projects')
+    else:
+        return redirect('login', True)
+
+
+@require_POST
+def api_register(request):
+    request.session['client_id'] = request.POST['client_id']
+    request.session['client_secret'] = request.POST['client_secret']
+
+    request.session['first_name'] = request.POST['first_name']
+    request.session['last_name'] = request.POST['last_name']
+    request.session['email'] = request.POST['email']
+
+    request.session['password'] = request.POST['password']
+
+    git_oauth_url = 'https://github.com/login/oauth/authorize?client_id={0}'\
+                    .format(request.POST['client_id'])
+    return redirect(git_oauth_url)
 
 
 # run the new pr command when the webhook detects a PullRequestEvent
 @csrf_exempt
 @require_POST
 def webhook(request):
+    print 'webhook coming in'
     try:
         payload = json.loads(request.body)
         act = payload['action']
@@ -372,35 +503,60 @@ def browserstack_callback(request, img_id):
 @require_POST
 def approve_diff(request):
     if request.is_ajax():
-        diff_obj_id = request.POST.get('diff_id', -1)
-        try:
-            d = Diff.objects.get(id=diff_obj_id)
-        except Diff.DoesNotExist:
-            # For some reason the Diff was deleted or there was a Javascript checkbox error
+        diff_or_img = request.POST.get('diff_or_img', None)
+
+        if diff_or_img == 'diff':
+            diff_obj_id = request.POST.get('diff_id', -1)
+            try:
+                obj = Diff.objects.get(id=diff_obj_id)
+            except Diff.DoesNotExist:
+                # For some reason the Diff was deleted or there was a Javascript checkbox error
+                return HttpResponse(status=500)
+        elif diff_or_img == 'img':
+            img_obj_id = request.POST.get('img_id', -1)
+            try:
+                obj = Image.objects.get(id=img_obj_id)
+            except Image.DoesNotExist:
+                # For some reason the Diff was deleted or there was a Javascript checkbox error
+                return HttpResponse(status=500)
+        else:
             return HttpResponse(status=500)
         # toggle the diff.is_approved
-        d.is_approved = not d.is_approved
-        d.save()
+        obj.is_approved = not obj.is_approved
+        obj.save()
 
         # get an updated number of approved changed diffs
         pr_obj = PR.objects.get(git_pr_number=request.POST['pr_number'])
 
-        changed_diffs = []
-        for diff in pr_obj.get_diffs():
-            if diff.diff_percent > 0:
-                changed_diffs.append(diff)
+        diff_types = get_all_diff_types_from_pr(pr_obj)
 
-        approved_changed_diffs = []
-        for diff in changed_diffs:
-            if diff.is_approved:
-                approved_changed_diffs.append(diff)
+        ajax_reply = {'num_changed': len(diff_types['changed']['all']),
+                      'num_changed_approved': len(diff_types['changed']['approved']),
 
-        ajax_reply = {'num_approved_changes': len(approved_changed_diffs),
-                      'num_total_changes': len(changed_diffs)}
+                      'num_unchanged': len(diff_types['unchanged']['all']),
+                      'num_unchanged_approved': len(diff_types['unchanged']['approved']),
 
+                      'num_new': len(diff_types['new']['all']),
+                      'num_new_approved': len(diff_types['new']['approved']),
+
+                      'num_deleted': len(diff_types['deleted']['all']),
+                      'num_deleted_approved': len(diff_types['deleted']['approved']),
+
+                      'num_approved_states': len(diff_types['total_states']['approved']),
+                      'num_total_states': len(diff_types['total_states']['all'])
+                      }
         return HttpResponse(json.dumps(ajax_reply), content_type='application/json')
     else:
         # the request was not in the expect form of an Ajax request
+        return HttpResponse(status=400)
+    return
+
+
+@require_POST
+def approve_img(request):
+    if request.is_ajax():
+        return HttpResponse(status=200)
+    else:
         return HttpResponse(status=400)
 
 
@@ -414,14 +570,17 @@ def approve_or_reset_diffs(request):
         if request.POST['reset_or_approve'] == 'approve':
             for diff in pr_obj.get_diffs():
                 # only approve diffs with changes
-                if diff.diff_percent > 0:
-                    diff.is_approved = True
-                    diff.save()
+                diff.is_approved = True
+                diff.save()
+            for img in pr_obj.get_new_states_images():
+                img.is_approved = True
+                img.save()
 
-            url = reverse('view_pr', kwargs={'repo_name': urllib.quote_plus(pr_obj.git_repo),
-                                             'pr_number': pr_obj.git_pr_number})
-            reply = {'url': url}
-            return HttpResponse(json.dumps(reply), content_type='application/json')
+            for img in pr_obj.get_deleted_states_images():
+                img.is_approved = True
+                img.save()
+
+            return HttpResponse(status=200)
 
         elif request.POST['reset_or_approve'] == 'reset':
             # get list of changed diffs set, set is_approved=False
@@ -429,10 +588,18 @@ def approve_or_reset_diffs(request):
                 # only approve diffs with changes
                 if diff.diff_percent > 0:
                     diff.is_approved = False
-                    diff.save()
-            url = reverse('view_pr', kwargs={'repo_name': urllib.quote_plus(pr_obj.git_repo),
-                                             'pr_number': pr_obj.git_pr_number})
-            reply = {'url': url}
-            return HttpResponse(json.dumps(reply), content_type='application/json')
+                else:
+                    diff.is_approved = True
+                diff.save()
+
+            for img in pr_obj.get_new_states_images():
+                img.is_approved = False
+                img.save()
+
+            for img in pr_obj.get_deleted_states_images():
+                img.is_approved = False
+                img.save()
+
+            return HttpResponse(status=200)
 
     return HttpResponse(status=500)

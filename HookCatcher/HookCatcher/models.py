@@ -4,10 +4,22 @@ import os
 import uuid
 
 import requests
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
+
+
+@python_2_unicode_compatible
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    git_client_id = models.CharField(max_length=100)
+    git_client_secret = models.CharField(max_length=100)
+    git_access_token = models.CharField(max_length=100)
+
+    def __str__(self):
+        return '%s' % (self.user.username)
 
 
 # Create your models here.
@@ -73,6 +85,34 @@ class PR(models.Model):
         # find the intersection between the two lists in case image is used in mulitple diffs
         return set(target_diff_list) & set(source_diff_list)
 
+    def get_new_states_images(self):
+        new_states = []  # list of images that pertain to newly tracked states for this PR
+        for image in self.git_source_commit.get_images():
+            is_new_state = True
+            if len(image.source_img_in_Diff.all()) > 0:
+                # find a diff with matching source and target git_commits in the PR
+                for diff in image.source_img_in_Diff.all():
+                    # if the diff has a target and source of the pr then it isn't new
+                    if diff.target_img.state.git_commit == self.git_target_commit:
+                        is_new_state = False
+            if is_new_state:
+                new_states.append(image)
+        return new_states
+
+    def get_deleted_states_images(self):
+        deleted_states = []
+        for image in self.git_target_commit.get_images():
+            is_deleted_state = True
+            if len(image.target_img_in_Diff.all()) > 0:
+                # find a diff with matching source and target git_commits with the pr_obj
+                for diff in image.target_img_in_Diff.all():
+                    # if the diff has a target and source of the pr then it isn't new
+                    if diff.source_img.state.git_commit == self.git_source_commit:
+                        is_deleted_state = False
+            if is_deleted_state:
+                deleted_states.append(image)
+        return deleted_states
+
     def __str__(self):
         return '%s: PR #%d' % (self.git_repo, self.git_pr_number)
 
@@ -133,6 +173,8 @@ class Image(models.Model):
     operating_system = models.CharField(max_length=200)
     device_res_width = models.IntegerField()
     device_res_height = models.IntegerField()
+    is_approved = models.BooleanField(default=False)
+
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 
