@@ -24,7 +24,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or 'qwnj&01%5_q$j+&v**2o9mafh+zt9^y^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -139,6 +139,10 @@ MEDIA_URL = '/media/'
 POSTGRES_PORT = os.getenv('POSTGRES_PORT')
 if not POSTGRES_PORT:
     POSTGRES_PORT = 5432
+POSTGRES_HOST = os.getenv("POSTGRES_HOST") or "127.0.0.1"
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD") or "garnish"
+POSTGRES_USER = os.getenv("POSTGRES_USER") or "garnish_user"
+POSTGRES_DB_NAME = os.getenv("POSTGRES_DB_NAME") or "garnish_db"
 
 
 # Load user specific settings saved in a separate file
@@ -156,10 +160,10 @@ except IOError:
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'garnish_db',
-        'USER': 'garnish_user',
-        'PASSWORD': 'garnish',
-        'HOST': '127.0.0.1',
+        'NAME': POSTGRES_DB_NAME,
+        'USER': POSTGRES_USER,
+        'PASSWORD': POSTGRES_PASSWORD,
+        'HOST': POSTGRES_HOST,
         'PORT': POSTGRES_PORT,
     }
 }
