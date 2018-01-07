@@ -4,8 +4,8 @@
           Following Git Repos:
 
           {% for repo in repoList %}
-            <a href="{% url 'listPR' repo.git_repo|urlencode:"" %}">
-            {{repo.git_repo}}</a>
+            <a href="{% url 'listPR' repo|urlencode:"" %}">
+            {{repo}}</a>
           {% endfor %}
 
         {% else %}

@@ -1,12 +1,12 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import PR, Commit, Diff, History, Image, Profile, State
+from .models import PR, Build, Commit, Diff, History, Image, Profile, State
 
 
 # display the UUID field in the django admin
 class StateAdmin(admin.ModelAdmin):
-    readonly_fields = ('state_uuid',)
+    readonly_fields = ('state_uuid', 'full_url')
 
 
 class ImageAdmin(admin.ModelAdmin):
@@ -24,6 +24,7 @@ class HistoryAdmin(admin.ModelAdmin):
 admin.site.register(State, StateAdmin)
 admin.site.register(Image, ImageAdmin)
 admin.site.register(Diff)
+admin.site.register(Build)
 admin.site.register(Commit)
 admin.site.register(PR)
 admin.site.register(Profile)

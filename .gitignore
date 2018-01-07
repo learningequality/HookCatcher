@@ -1,5 +1,6 @@
 .DS_STORE
 *.pyc
+*.pem
 *.rdb
 *.sublime-workspace
 *.sublime-project

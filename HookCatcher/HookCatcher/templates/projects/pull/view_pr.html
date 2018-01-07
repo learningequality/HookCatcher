@@ -26,6 +26,27 @@
           <b>{{pr.git_title}} #{{pr.git_pr_number}}</b>
         </div>
 
+        {% if new_build %}
+        <form class="new_commit_block" action="{% url 'api_generate_diffs' repo_name=repo|urlencode:"" pr_number=pr.git_pr_number base_commit=new_build.git_target_commit.git_hash head_commit=new_build.git_source_commit.git_hash %}" method="post">{% csrf_token %}
+          <p class="new_generate_prompt">
+            &#9888; A new Commit was detected! Complete the following and generate Diffs!
+          </p>
+          <div class="new_generate_block">
+            <div class="new_commit_fork_block">
+              <p><b>Base Fork {{new_build.git_target_commit | slice:':-32'}}</b></p>
+              Base Host: <input type="text" name="base_host">
+            </div>
+
+            <div class="new_commit_fork_block">
+              <p><b>Head Fork {{new_build.git_source_commit | slice:':-32'}}</b></p>
+              Head Host: <input type="text" name="head_host">
+            </div>
+
+            <input class="btn_new_generate" type="submit" value="Generate Screenshots">
+          </div>
+        </form>
+        {% endif %}
+
         <div class="pr_approve_block">
           <div class="approve_header">
             <div id="approve_status">

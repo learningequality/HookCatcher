@@ -23,7 +23,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            s = State.objects.get(stateUUID=options['stateUUID'])
+            s = State.objects.get(state_uuid=options['stateUUID'])
         except State.DoesNotExist:
             raise CommandError('State "%s" does not exist' % options['stateUUID'])
         add_screenshots(s)

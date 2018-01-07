@@ -8,11 +8,9 @@ import json
 import os
 import platform
 import tempfile
-import time
-
-import django_rq
 import requests
 import sh
+
 from django.conf import settings  # database dir
 from HookCatcher.models import Image
 
@@ -84,7 +82,7 @@ def browserstack(state_obj, config):
         }
 
         # all browserstck devices --> https://www.browserstack.com/screenshots/browsers.json
-        data = {"url": get_ngrok(state_obj.state_url),
+        data = {"url": get_ngrok(state_obj.full_url),
                 "callback_url": "http://fdaac17c.ngrok.io/bs_callback/{0}/".format(img_obj.id),
                 "win_res": '{0}x{1}'.format(config['desktop_resolution'][0],
                                             config['desktop_resolution'][1]),
@@ -145,26 +143,33 @@ def chrome(state_obj, config):
     if (img_query.count() == 0 or
        img_query.count() == 1 and not img_query.get().image_exists()):
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
-            sh.node('screenshotScript/headlessChrome.js',  # where the capture.js script is
-                    '--url={0}'.format(state_obj.state_url),                # url for screenshot
-                    '--imgName={0}'.format(temp_img.name),                  # img name
-                    '--viewportWidth={0}'.format(WIDTH),                          # width
-                    '--viewportHeight={0}'.format(HEIGHT))                        # height
-            if img_query.count() == 1:
-                # save this file plus information into Image model
-                img_obj = img_query.get()
-            else:
-                img_obj = Image(img_file=None,
-                                browser_type=BROWSER,
-                                operating_system=OS,
-                                state=state_obj,
-                                device_res_width=WIDTH,
-                                device_res_height=HEIGHT)
+            try:
+                sh.node('screenshotScript/puppeteer.js',  # where the capture.js script is
+                        '--url={0}'.format(state_obj.full_url),                # url for screenshot
+                        '--imgName={0}'.format(temp_img.name),                  # img name
+                        '--imgWidth={0}'.format(WIDTH),                          # width
+                        '--imgHeight={0}'.format(HEIGHT))                      # height
+                if img_query.count() == 1:
+                    # save this file plus information into Image model
+                    img_obj = img_query.get()
+                else:
+                    img_obj = Image(img_file=None,
+                                    browser_type=BROWSER,
+                                    operating_system=OS,
+                                    state=state_obj,
+                                    device_res_width=WIDTH,
+                                    device_res_height=HEIGHT)
 
-            img_obj.img_file.save(real_img_name, temp_img, save=True)
-            print('Generated image named: {0}'.format(os.path.join(settings.MEDIA_ROOT,
-                                                                   img_obj.img_file.name)))
-            return img_obj
+                img_obj.img_file.save(real_img_name, temp_img, save=True)
+                return img_obj
+
+            # if there is some issue with screenshotting then say so
+            # but still create the image object
+            except sh.ErrorReturnCode_1, e:
+                error_msg = e.stdout
+                print(error_msg)
+
+            return
     # if this exact image is in the database and in the file system, just return the image obj
     elif img_query.count() == 1 and img_query.get().image_exists():
         print('Image named already exists: {0}'.format(os.path.join(settings.MEDIA_ROOT,
@@ -196,7 +201,7 @@ def phantom(state_obj, config):
        img_query.count() == 1 and not img_query.get().image_exists()):
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
             sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
-                         state_obj.state_url,        # url for screenshot
+                         state_obj.full_url,        # url for screenshot
                          temp_img.name,                  # img name
                          WIDTH,                          # width
                          HEIGHT)                         # height
@@ -254,14 +259,10 @@ def add_screenshots(state_obj):
     if(os.path.exists(config_path) is True):
         with open(config_path, 'r') as c:
             config_file = json.loads(c.read())
-            queue = django_rq.get_queue('default')
-
+            print('STATE: {0}'.format(state_obj))
             for config in config_file:
-                # image_obj = gen_screenshot    (state_obj, config['id'], config['config'])
-                job = queue.enqueue(gen_screenshot, state_obj, config['id'], config['config'])
-                while not job.is_finished:
-                    time.sleep(1)
-                image_obj = job.result
+                image_obj = gen_screenshot(state_obj, config['id'], config['config'])
+
                 if image_obj:
                     img_list.append(image_obj)
             return img_list

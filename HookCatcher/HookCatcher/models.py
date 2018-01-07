@@ -6,8 +6,10 @@ import uuid
 import requests
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.core.validators import URLValidator
+from django.core.validators import MaxValueValidator  # IntegerField Range
+from django.core.validators import MinValueValidator, URLValidator
 from django.db import models
+from django.db.models import Q  # filter Build for status_code OR status_code
 from django.utils.encoding import python_2_unicode_compatible
 
 
@@ -49,6 +51,20 @@ class State(models.Model):
     state_desc = models.TextField()
     state_url = models.TextField()
     git_commit = models.ForeignKey(Commit, on_delete=models.CASCADE)  # many commits for one state
+    host_url = models.TextField(null=True, blank=True)
+    login_username = models.CharField(max_length=200, null=True, blank=True)
+    login_password = models.CharField(max_length=200, null=True, blank=True)
+
+    def get_full_url(self):
+        if self.host_url:
+            if self.state_url[0] != '/':
+                return self.host_url + self.state_url
+            else:
+                return os.path.join(self.host_url, self.state_url)
+        else:
+            return self.state_url
+
+    full_url = property(get_full_url)
 
     def __str__(self):
         return '%s, %s:%s %s' % (self.state_name,
@@ -62,13 +78,44 @@ class PR(models.Model):
     git_repo = models.CharField(max_length=200)
     git_title = models.TextField()
     git_pr_number = models.IntegerField(unique=True)
-    # BASE of the git pull request Before version of state
+
+    # when a new commit is added to the PR but nothing done with that commit yet
+    def get_latest_build(self):
+        all_builds = self.build_set.all().order_by('-date_time')
+        return all_builds.first()
+
+    # use this method thiso display the last processed build information of a PR
+    def get_last_executed_build(self):
+        all_builds = self.build_set.all().filter(~Q(status_code=0)).order_by('-date_time')  # noqa: E501
+        if len(all_builds) > 0:
+            return all_builds.first()
+        else:
+            return None
+
+    def __str__(self):
+        return '%s: PR #%d' % (self.git_repo, self.git_pr_number)
+
+
+@python_2_unicode_compatible
+class Build(models.Model):
+    pr = models.ForeignKey(PR, on_delete=models.CASCADE)
+    pr_version = models.IntegerField()
+    date_time = models.DateTimeField()
+    # BASE brach of the git pull request, commonly release branch
     # call state.gitCommit.targetCommit_set.all() to get PR's where state is used as a target
     git_target_commit = models.ForeignKey(Commit, related_name='target_commit_in_PR',
                                           on_delete=models.CASCADE)
-    # HEAD of the git pull request After version of state
+    # HEAD brach of the git pull request, commonly personal branch
     git_source_commit = models.ForeignKey(Commit, related_name='source_commit_in_PR',
                                           on_delete=models.CASCADE)
+    # status code meanings
+    # 0: Build not initiated
+    # 1: Build in progress
+    # 2: Build completed
+    # 3: Build cancelled
+    # 4: Build Error
+    status_code = models.IntegerField(default=0,
+                                      validators=[MaxValueValidator(4), MinValueValidator(0)])
 
     # function to retrieve a list of diffs that pertain to this PR
     def get_diffs(self):
@@ -86,11 +133,11 @@ class PR(models.Model):
         return set(target_diff_list) & set(source_diff_list)
 
     def get_new_states_images(self):
-        new_states = []  # list of images that pertain to newly tracked states for this PR
+        new_states = []  # list of images that pertain to newly tracked states for this PR Build
         for image in self.git_source_commit.get_images():
             is_new_state = True
             if len(image.source_img_in_Diff.all()) > 0:
-                # find a diff with matching source and target git_commits in the PR
+                # find a diff with matching source and target git_commits in the PR Build
                 for diff in image.source_img_in_Diff.all():
                     # if the diff has a target and source of the pr then it isn't new
                     if diff.target_img.state.git_commit == self.git_target_commit:
@@ -114,7 +161,9 @@ class PR(models.Model):
         return deleted_states
 
     def __str__(self):
-        return '%s: PR #%d' % (self.git_repo, self.git_pr_number)
+        return 'PR #{1} v{2}: status {0}'.format(self.status_code,
+                                                 self.pr.git_pr_number,
+                                                 self.pr_version)
 
 
 @python_2_unicode_compatible
@@ -126,10 +175,11 @@ class History(models.Model):
 
     # record actions in a Pull Request Event Payload to History
     @classmethod
-    def log_pr_action(cls, pr_obj, git_payload_action, username):
-        msg = 'PR #{0} has been {1} by {2}'.format(pr_obj.git_pr_number,
+    def log_pr_action(cls, pr_number, git_payload_action, username):
+        msg = 'PR #{0} has been {1} by {2}'.format(pr_number,
                                                    git_payload_action,
                                                    username)
+        pr_obj = PR.objects.get(git_pr_number=pr_number)
         cls(message=msg, pr=pr_obj).save()
         return
 
@@ -147,7 +197,7 @@ class History(models.Model):
             cls(message=msg, pr=pr_obj).save()
         return
 
-    # record in history when a user manually approves of a diff
+    # record in history when a user manually approves of a diff (probably too granular)
     @classmethod
     def log_user_approval(cls, pr_obj, diff_obj, username):
         msg = 'Diff of state "{0}" was approved by "{1}"'.format(

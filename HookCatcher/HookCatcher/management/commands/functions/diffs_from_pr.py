@@ -7,30 +7,28 @@
         ~ If no states are even checked in, do nothing.
         ~ if PR number isn''t valid, do nothing
 '''
+import time
 from collections import defaultdict
-from os import path
 
 import django_rq
-import sh
-
-from add_pr_info import add_pr_info
 from add_screenshots import add_screenshots
-from django.conf import settings  # database dir
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
-from HookCatcher.models import Diff, History
+from HookCatcher.management.commands.functions.new_commit_old_pr import \
+  new_commit_old_pr
+from HookCatcher.models import Build, Diff, History
 
-
-WORKING_DIR = path.abspath(settings.WORKING_DIR)
 RQ_QUEUE = django_rq.get_queue('default')
 
 
-def switchBranch(gitBranch):
-    working_git_dir = path.abspath(path.join(WORKING_DIR, '.git'))
-    sh.git('--git-dir', working_git_dir, '--work-tree',
-           WORKING_DIR, 'checkout', gitBranch)
+def is_int(var):
+    try:
+        int(var)
+    except TypeError:  # not an int
+        return False
+    return True
 
 
-def generate_diffs(img_dict, pr_obj):
+def generate_diffs(img_dict, build_obj):
     for img_pair in img_dict:
         # the list associated to a key should be exactly 2 one for head one for branch
         # else it is invalid for generating a diff
@@ -44,29 +42,34 @@ def generate_diffs(img_dict, pr_obj):
                          img_dict[img_pair][1].img_file.name)
 
         elif len(img_dict[img_pair]) == 1:
-            msg = 'No Diff could be made. State "{0}" is defined for Branch "{1}" but not the opposing Branch. Please fix this.'.format(  # noqa: E501
+            # rather common use case when editting list of states so not an error
+            msg = 'There is a new or deleted State named: "{0}" that is only defined in Branch "{1}"'.format(  # noqa: E501
                   img_dict[img_pair][0].state.state_name,
                   img_dict[img_pair][0].state.git_commit.git_branch)
             print msg
-            History.log_sys_error(pr_obj, msg)
         else:
             msg = 'No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.'.format(  # noqa: E501
                   img_dict[img_pair][0].state.state_name,
                   img_dict[img_pair][0].state.git_commit.git_branch)
             print msg
-            History.log_sys_error(pr_obj, msg)
-    return
+            History.log_sys_error(build_obj.pr, msg)
+            return 4  # return status code = 4 (error)
+
+    # Log all the types of diffs that have been saved
+    # TODO: CANT CALL Log initial diffs from here
+    # History.log_initial_diffs(build_obj.pr)
+    return 2
 
 
 # parrallel processes for each stateName from here
     # input: A single stateName
     # Output: Screenshots for all states, All diffs possible
     # Edge: Can be 0 diffs generated
-def generate_images(state_name, pr_obj):
+def generate_images(state_name, build_obj):
     img_dict = defaultdict(list)  # {'key': [<ImgObj1>, <ImgObj2>], 'key2': [...}
-    for single_state in state_name:  # should run two times
-        switchBranch(single_state.git_commit.git_branch)  # depricate
 
+    for single_state in state_name:  # should run two times
+        print 'RUN ADDD SCREENSHOT FOR ' + single_state.state_name
         img_list = add_screenshots(single_state)
 
         for i in img_list:
@@ -77,24 +80,87 @@ def generate_images(state_name, pr_obj):
                                             i.device_res_width,
                                             i.device_res_height)
             img_dict[key].append(i)
-
-    # if there are any images
     if img_dict:
-        RQ_QUEUE.enqueue(generate_diffs, img_dict, pr_obj)
-        History.log_initial_diffs(pr_obj)
+        return img_dict
     else:
-        msg = 'There was no config file to determine which screenshots to generate, so none were generated'  # noqa: E501
+        msg = 'There was an error in the config file or screenshot process so no image was taken'  # noqa: E501
         print msg
-        History.log_sys_error(pr_obj, msg)
+        History.log_sys_error(build_obj.pr, msg)
+        return 4  # return status code for this message
+
+
+def redis_entrypoint(new_states_dict, build_id):
+    build = Build.objects.get(id=build_id)
+
+    # enqueue the job of taking screenshots should return a img_dict prepared for diffing
+    img_Q = lambda state_name: RQ_QUEUE.enqueue(generate_images, new_states_dict[state_name], build)  # noqa: E731, E501
+    print('Generating screenshots of states...')
+
+    image_jobs = [img_Q(state_name) for state_name in new_states_dict]
+    list_image_dict = []
+
+    while not all(i_job.result for i_job in image_jobs):
+        time.sleep(0.1)
+        continue
+
+    # Add image_dicts in to a list
+    for i in image_jobs:
+        if i.result and not is_int(i.result):  # if its an actual img dictionary
+            list_image_dict.append(i.result)
+        elif is_int(i.result):
+            build.status_code = i.result
+            build.save()
+
+    diff_Q = lambda img_dict: RQ_QUEUE.enqueue(generate_diffs, img_dict, build)  # noqa: E731
+    print('Diffing screenshots...')
+
+    diff_jobs = [diff_Q(img_dict) for img_dict in list_image_dict]
+    while not all(d_job.result for d_job in diff_jobs):
+        time.sleep(0.1)
+        continue
+
+    for d in diff_jobs:
+        if not build.status_code == d.result:
+            build.status_code = d.result
+            build.save()
+
+    # TODO NEED TO CHANGE STATUS CODE HANDLING TO NOT PASS BUILD OBJ
+    # if there wasnt an error throughout the process then it succeeded!
+    if not (build.status_code == 4 or build.status_code == 3):
+        build.status_code = 2  # status code 2 = build Completed!
+        build.save()
+        print('Completed screenshoting procedure successfully!')
+    print('Error occured with the screenshoting procedure!')
+
+
+# get all the right information to start diffing
+# GETS CALLED FROM: auto-screenshot.py management command
+def diffs_from_pr(pr_obj, base_states_list, head_states_list):
+    latest_build = pr_obj.get_latest_build()
+    previous_build = pr_obj.get_last_executed_build()
+
+    # if new build for old pr
+    if latest_build.status_code == 0:
+        # prev.status = 0 means
+        if (previous_build and
+           previous_build.status_code != 0 and latest_build is not previous_build):
+            latest_build.status_code = 1  # status code 1 = build in progress
+            latest_build.save()
+            new_commit_old_pr(previous_build, base_states_list, head_states_list)
+
+        # if new build for new pr
+        else:
+            latest_build.status_code = 1  # status code 1 = build in progress
+            latest_build.save()
+            # dictionary of states that were added {'stateName1': (baseVers, headVers), ...}
+            new_states_dict = defaultdict(list)
+            # NOTE: if people name the state wrong this can cause errors in the system
+            for base_state in base_states_list:
+                new_states_dict[base_state.state_name].append(base_state)
+            for head_state in head_states_list:
+                # {'key' : baseStateObj, headStateObj, 'key': ...}
+                new_states_dict[head_state.state_name].append(head_state)
+
+            RQ_QUEUE.enqueue(redis_entrypoint, new_states_dict, latest_build.id)
+
     return
-
-
-# arguments can either be: int(prNumber) or dict(payload)
-def diffs_from_pr(prnumber_or_payload):
-    # output the states that were added to the database
-    pr_info = add_pr_info(prnumber_or_payload)
-    savedStatesDict = pr_info['states_list']
-    pr_obj = pr_info['pr_object']
-    for stateName in savedStatesDict:
-        # generateFromState(savedStatesDict[stateName])
-        RQ_QUEUE.enqueue(generate_images, savedStatesDict[stateName], pr_obj)

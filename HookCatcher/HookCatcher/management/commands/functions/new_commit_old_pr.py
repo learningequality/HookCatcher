@@ -11,7 +11,7 @@ RQ_QUEUE = django_rq.get_queue('default')
 
 
 # override the commit objects for the PR with the latest commits
-def new_commit_old_pr(pr_obj, new_base_states, new_head_states):
+def new_commit_old_pr(build_obj, new_base_states, new_head_states):
     import time
     start_time = time.time()
     img_pairs_dict = defaultdict(lambda: defaultdict(list))
@@ -21,14 +21,14 @@ def new_commit_old_pr(pr_obj, new_base_states, new_head_states):
 
     # WHERE key = head/base, state_name, browser_type, os, width, height
     # load all the old images first to the list
-    for old_base_img in pr_obj.git_target_commit.get_images():
+    for old_base_img in build_obj.git_target_commit.get_images():
         key = "{0}{1}{2}{3}x{4}".format(old_base_img.state.state_name,
                                         old_base_img.browser_type,
                                         old_base_img.operating_system,  # {2}
                                         old_base_img.device_res_width,
                                         old_base_img.device_res_height)
         img_pairs_dict[key]['BASE'].append(old_base_img)
-    for old_head_img in pr_obj.git_source_commit.get_images():
+    for old_head_img in build_obj.git_source_commit.get_images():
         key = "{0}{1}{2}{3}x{4}".format(old_head_img.state.state_name,
                                         old_head_img.browser_type,
                                         old_head_img.operating_system,  # {2}
@@ -102,7 +102,7 @@ def new_commit_old_pr(pr_obj, new_base_states, new_head_states):
                 msg = 'No Diff could be made. There were more than one state with the same name "{0}" in Branch "{1}". Please fix this.'.format(  # noqa: E501
                       old_img_obj.state.state_name,
                       old_img_obj.state.git_commit.git_branch)
-                History.log_sys_error(pr_obj, msg)
+                History.log_sys_error(build_obj.pr, msg)
 
         # Try to find an exisiting Diff obj with old images
 
@@ -132,7 +132,7 @@ def new_commit_old_pr(pr_obj, new_base_states, new_head_states):
 
                 else:  # more than 1 exisiting diff returned...
                     msg = 'There is more than 1 Diff found for a pair of images: {0}'.format(existing_diff)  # noqa: E501
-                    History.log_sys_error(pr_obj, msg)
+                    History.log_sys_error(build_obj.pr, msg)
             # if there is only 1 image for base/head aka Let's create a new diff
             elif len(img_type['BASE']) == 1 and len(img_type['HEAD']) == 1:
                 RQ_QUEUE.enqueue(gen_diff, img_type['BASE'][0], img_type['HEAD'][0])

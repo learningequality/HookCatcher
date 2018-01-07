@@ -123,9 +123,6 @@ MEDIA_URL = '/media/'
 # # the name of the directory in the Git Repository that stores the state representation JSON files.
 # STATES_FOLDER = os.getenv('STATES_FOLDER')
 
-# # Local file path of the directory being pointed to used to switch branches (depreicated)
-# WORKING_DIR = os.getenv('WORKING_DIR') or ''
-
 # # File to set what specific screenshot settings you want
 # SCREENSHOT_CONFIG = os.getenv('SCREENSHOT_CONFIG')
 

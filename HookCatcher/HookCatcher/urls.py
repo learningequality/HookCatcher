@@ -18,7 +18,7 @@ urlpatterns = [
         views.singleBranch, name='singleBranch'),
     url(r'^projects/(?P<repo_name>[a-zA-Z0-9%]+)/(?P<pr_number>[0-9]+)/$',
         views.singlePR, name='singlePR'),
-    url(r'^projects/(?P<repo_name>[a-zA-Z0-9%]+)/(?P<pr_number>[0-9]+)/(?P<res_width>[0-9]+)/(?P<res_height>[0-9]+)/$',  # noqa: #501
+    url(r'^projects/(?P<repo_name>[a-zA-Z0-9%]+)/(?P<pr_number>[0-9]+)/(?P<res_width>[0-9]+)/(?P<res_height>[0-9]+)/$',  # noqa: E501
         views.singlePR, name='singlePR'),
 
     # Internal APIs
@@ -26,6 +26,8 @@ urlpatterns = [
     url(r'^api/login/$', views.api_login, name='api_login'),
 
     url(r'^api/logout/$', views.api_logout, name='api_logout'),
+    url(r'^api/generate_diffs/(?P<repo_name>[a-zA-Z0-9%]+)/(?P<pr_number>[0-9]+)/(?P<base_commit>[a-zA-Z0-9]+)/(?P<head_commit>[a-zA-Z0-9]+)/$',  # noqa: E501
+        views.api_generate_diffs, name='api_generate_diffs'),
     url(r'^webhook/$', views.webhook, name='webhook'),
     url(r'^bs_callback/(?P<img_id>[0-9]+)/$',
         views.browserstack_callback, name='browserstack_callback'),

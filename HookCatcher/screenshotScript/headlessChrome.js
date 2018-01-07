@@ -81,11 +81,11 @@ const protocol = await CDP({port: chrome.port});
 
     setTimeout(async function() {
       const base64img = await Page.captureScreenshot({format:format, fromSurface: true});
-      file.writeFile(imgName, base64img.data, 'base64', function(err) {
+      file.writeFile(imgName + "." + format, base64img.data, 'base64', function(err) {
         if (err) {
           console.error(err);
         } else {
-          console.log('Screenshot saved: ' + imgName);
+          console.log('Screenshot saved: ' + imgName + "." + format);
         }
         protocol.close();
         chrome.kill();

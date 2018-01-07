@@ -1,32 +1,8 @@
 [
-    {
-        "id": "phantom",
-        "config": {
-            "resolution": [600,800]
-        }
-    },
-    {
-        "id": "chrome",
-        "config": {
-            "resolution": [375,667]
-        }
-    },
-    {
-        "id": "chrome",
-        "config": {
-            "resolution": [1200,1600]
-        }
-    },
-    {
-        "id": "NOTUSING_browserstack",
-        "config": {
-            "desktop_resolution": [1024, 768],
-            "device_resolution": [2048, 1536],
-            "os":"android",
-            "os_version":"5.0",
-            "browser":"Android Browser",
-            "device":"Google Nexus 9",
-            "browser_version":null
-        }
-    }
+  {
+      "id": "chrome",
+      "config": {
+          "resolution": [600,800]
+      }
+  }
 ]

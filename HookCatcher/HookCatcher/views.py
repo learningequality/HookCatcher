@@ -4,6 +4,7 @@ import urllib
 
 import django_rq
 import requests
+
 from django.conf import settings  # database dir
 from django.contrib.auth import login as login_auth
 from django.contrib.auth import logout as logout_auth
@@ -33,7 +34,7 @@ def state_representation(state_obj):
     return {
         'name': state_obj.state_name,
         'desc': state_obj.state_desc,
-        'url': state_obj.state_url,
+        'url': state_obj.full_url,
         'git_repo': state_obj.git_commit.git_repo,
         'git_branch': state_obj.git_commit.git_branch,
         'git_commit_sha': state_obj.git_commit.git_hash,
@@ -134,17 +135,70 @@ def register(request):
     return render(request, 'register.html')
 
 
-def projects(request):
-    print request.user
-    print request.user.is_authenticated
-    print request.session.get('client_id', 'no login')
+'''
+    Function to retrieve relevant info from Github
+    get a list of repositories that correspond to a particular git Profile
 
-    unique_repos = Commit.objects.order_by().values('git_repo').distinct()
-    return render(request, 'projects/index.html', {
-        'repoList': unique_repos,
+    To get all pull requests use ?access_token for private repos
+    "pulls_url": "https://api.github.com/repos/MingDai/gittest/pulls{/number}"
+
+    To get all branches of a repo use ?access_token for private repos
+    "branches_url": "https://api.github.com/repos/MingDai/gittest/branches{/branch}"
+    NEED SOME PERMISSIONS IDONO WHICH
+'''
+
+
+def git_list_repositories(git_access_token):
+    integration_repos = []
+
+    # custom header
+    # https://developer.github.com/apps/building-integrations/setting-up-and-registering-github-apps/identifying-users-for-github-apps/  # noqa: E501
+    git_header = {
+        'Accept': 'application/vnd.github.machine-man-preview+json',
+    }
+
+    # get all the integration ids
+    installs_url = 'https://api.github.com/user/installations'
+
+    get_installs = requests.get('{0}?access_token={1}'.format(installs_url, git_access_token),
+                                headers=git_header)
+    installs = json.loads(get_installs.text)
+
+    for installation in installs['integration_installations']:
+        # get all the repos for this particular integration
+        user_repos_url = "{0}/{1}/repositories?access_token={2}".format(installs_url,
+                                                                        installation['id'],
+                                                                        git_access_token)
+        get_repos = requests.get(user_repos_url, headers=git_header)
+        all_repos = json.loads(get_repos.text)
+        for repo in all_repos['repositories']:
+            integration_repos.append(repo['full_name'])  # "MingDai/HookCatcher"
+
+    return integration_repos
+
+
+def projects(request):
+    if request.user.is_authenticated:
+        unique_repos = Commit.objects.order_by().values('git_repo').distinct()
+        # unique_repos = git_list_repositories(request.user.profile.git_access_token)
+        return render(request, 'projects/index.html', {
+            'repoList': unique_repos,
+            })
+    else:
+        return redirect('login')
+
+
+def listPR(request, repo_name):
+    repo_name = urllib.unquote(repo_name)
+    pr_list = PR.objects.filter(git_repo=repo_name).order_by('-git_pr_number')
+
+    return render(request, 'compare/index.html', {
+        'prList': pr_list,
+        'gitRepo': repo_name
     })
 
 
+# DEPRECATED
 # retrieve all states with a matching branch name
 def singleBranch(request, branch_name, commitSHA):
     branch_states = State.objects.filter(git_branch=branch_name)
@@ -155,16 +209,6 @@ def singleBranch(request, branch_name, commitSHA):
         'gitType': 'BRANCH',
         'gitName': branch_name,
         'gitCommit': gitCommitInfo(commitSHA),
-    })
-
-
-def listPR(request, repo_name):
-    repo_name = urllib.unquote(repo_name)
-    pr_list = PR.objects.filter(git_repo=repo_name).order_by('-git_pr_number')
-
-    return render(request, 'compare/index.html', {
-        'prList': pr_list,
-        'gitRepo': repo_name
     })
 
 
@@ -266,13 +310,13 @@ def singlePR(request, pr_number, repo_name="", res_width="0", res_height="0"):
 # Helper function that returns all types of diffs from a PR
 # types of diffs: changed_diffs, unchanged_diffs, deleted_diffs, new_diffs
 # USED in view_pr controller and approve_pr api point
-def get_all_diff_types_from_pr(pr_obj):
+def get_all_diff_types_of_build(build_obj):
     changed_diffs = []
     approved_changed_diffs = []
 
     unchanged_diffs = []
     approved_unchanged_diffs = []
-    for diff in pr_obj.get_diffs():
+    for diff in build_obj.get_diffs():
         if diff.diff_percent > 0:
             changed_diffs.append(diff)
             if diff.is_approved:
@@ -283,14 +327,14 @@ def get_all_diff_types_from_pr(pr_obj):
                 approved_unchanged_diffs.append(diff)
 
     # screenshots with state defined in source_commit (head) only
-    new_diffs = pr_obj.get_new_states_images()
+    new_diffs = build_obj.get_new_states_images()
     approved_new_diffs = []
     for image in new_diffs:
         if image.is_approved:
             approved_new_diffs.append(image)
 
     # screenshots forom target_commit (base) only
-    deleted_diffs = pr_obj.get_deleted_states_images()
+    deleted_diffs = build_obj.get_deleted_states_images()
     approved_deleted_diffs = []
     for image in deleted_diffs:
         if image.is_approved:
@@ -330,16 +374,27 @@ def get_all_diff_types_from_pr(pr_obj):
 
 # The main page for viewing diffs.
 def view_pr(request, repo_name, pr_number):
-    if request.user.is_authenticated:
-        repo_name = urllib.unquote(repo_name)
-        pr_obj = PR.objects.get(git_pr_number=pr_number)
+    # if request.user.is_authenticated:
+    repo_name = urllib.unquote(repo_name)
+    pr_obj = PR.objects.get(git_pr_number=pr_number)
 
-        diff_types = get_all_diff_types_from_pr(pr_obj)
+    # display the last generated build diffs
+    # Have a new header section for a new dectected build
+    latest_build = pr_obj.get_latest_build()
+    completed_build = pr_obj.get_last_executed_build()
 
+    # if they are the same then only show completed_build
+    if latest_build == completed_build:
+        latest_build = None
+
+    if completed_build:
+        diff_types = get_all_diff_types_of_build(completed_build)
         return render(request, 'projects/pull/view_pr.html', {
                     'user': request.user.username,
                     'repo': repo_name,
                     'pr': pr_obj,
+                    'new_build': latest_build,
+                    'old_build': completed_build,
                     'history_list': pr_obj.history_set.all(),
 
                     'changed_diffs': diff_types['changed']['all'],
@@ -363,7 +418,17 @@ def view_pr(request, repo_name, pr_number):
                     'num_total_unapproved_states': len(diff_types['total_states']['unapproved']),
                 })
     else:
-        return redirect('login')
+        # new and old builds?
+        return render(request, 'projects/pull/view_pr.html', {
+                    'user': request.user.username,
+                    'repo': repo_name,
+                    'pr': pr_obj,
+                    'new_build': latest_build,
+                    'old_build': None,
+                    'history_list': pr_obj.history_set.all(),
+                })
+    # else:
+    #     return redirect('login')
 
 
 def pr_history(request, repo_name, pr_number):
@@ -464,7 +529,8 @@ def webhook(request):
         act = payload['action']
         print('github action: ', act)
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
-            call_command('auto-screenshot', payload)
+            call_command('webhookHandler', payload['number'])
+
         return HttpResponse(status=200)
     except:
         # github webhook error
@@ -500,6 +566,19 @@ def browserstack_callback(request, img_id):
     return HttpResponse(status=200)
 
 
+# view_pr "Generate" button starts this process does all the screenshots and diffing
+@require_POST
+def api_generate_diffs(request, repo_name, pr_number, base_commit, head_commit):
+    call_command('auto-screenshot',
+                 pr_number,
+                 request.POST['base_host'],
+                 request.POST['head_host'],
+                 base_commit,
+                 head_commit)
+
+    return redirect('view_pr', repo_name, pr_number)
+
+
 @require_POST
 def approve_diff(request):
     if request.is_ajax():
@@ -528,7 +607,7 @@ def approve_diff(request):
         # get an updated number of approved changed diffs
         pr_obj = PR.objects.get(git_pr_number=request.POST['pr_number'])
 
-        diff_types = get_all_diff_types_from_pr(pr_obj)
+        diff_types = get_all_diff_types_of_build(pr_obj.get_last_executed_build())
 
         ajax_reply = {'num_changed': len(diff_types['changed']['all']),
                       'num_changed_approved': len(diff_types['changed']['approved']),
@@ -566,25 +645,25 @@ def approve_or_reset_diffs(request):
     # get list of changed diffs set, set is_approved=true
     if request.is_ajax():
         pr_obj = PR.objects.get(git_pr_number=request.POST['pr_number'])
+        latest_build = pr_obj.get_last_executed_build()
 
         if request.POST['reset_or_approve'] == 'approve':
-            for diff in pr_obj.get_diffs():
+            for diff in latest_build.get_diffs():
                 # only approve diffs with changes
                 diff.is_approved = True
                 diff.save()
-            for img in pr_obj.get_new_states_images():
+            for img in latest_build.get_new_states_images():
                 img.is_approved = True
                 img.save()
 
-            for img in pr_obj.get_deleted_states_images():
+            for img in latest_build.get_deleted_states_images():
                 img.is_approved = True
                 img.save()
 
             return HttpResponse(status=200)
-
         elif request.POST['reset_or_approve'] == 'reset':
             # get list of changed diffs set, set is_approved=False
-            for diff in pr_obj.get_diffs():
+            for diff in latest_build.get_diffs():
                 # only approve diffs with changes
                 if diff.diff_percent > 0:
                     diff.is_approved = False
@@ -592,11 +671,11 @@ def approve_or_reset_diffs(request):
                     diff.is_approved = True
                 diff.save()
 
-            for img in pr_obj.get_new_states_images():
+            for img in latest_build.get_new_states_images():
                 img.is_approved = False
                 img.save()
 
-            for img in pr_obj.get_deleted_states_images():
+            for img in latest_build.get_deleted_states_images():
                 img.is_approved = False
                 img.save()
 

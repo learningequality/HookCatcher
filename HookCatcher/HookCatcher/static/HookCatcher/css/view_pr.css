@@ -46,6 +46,41 @@ a
   margin: 1rem 0rem;
 }
 
+
+/* NEW COMMIT DETECTED */
+.new_commit_block{
+  font-size: 1.2rem;
+}
+
+.new_generate_prompt{
+  font-size: 1.5rem;
+  margin: 0.5rem 0rem;
+}
+
+.new_generate_block{
+  margin: 0.5rem 2rem;
+}
+
+.new_commit_fork_block{
+  margin: 0.75rem 0rem;
+}
+
+.new_commit_fork_block input{
+  width: 25%;
+}
+
+.btn_new_generate{
+  font-size: 1.15rem;
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 2.5px;
+  padding: 0.5rem;
+  text-decoration: none;
+  color:#0077be;
+}
+
+
+/* Approve PR */
 .approve_header{
   display: flex;
   flex-wrap: nowrap;
@@ -69,6 +104,7 @@ a
   margin-left: 2rem;
 }
 
+/* HISTORY */
 .history_block{
   margin: 1rem 0rem;
 }
@@ -88,6 +124,9 @@ a
 .diff_title .diff_header{
   text-decoration: none;
 }
+
+
+
 /* diff images next to approval checkbox*/
 .diff_container{
   margin-left: 2rem;

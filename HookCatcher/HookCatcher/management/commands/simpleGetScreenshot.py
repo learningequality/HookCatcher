@@ -50,10 +50,14 @@ class Command(BaseCommand):
             url = options['url']
             imgName = options['imgName']
             configPath = settings.SCREENSHOT_CONFIG
+            print configPath
+            import time
+            time.sleep(30)
 
             if(os.path.exists(configPath) is True):
                 configFile = json.loads(open(configPath, 'r').read())
                 print('Generating image(s)...')
+
                 for config in configFile:
                     # check if there is the browser is a valid option
                     if (str(config["id"]).lower() == 'phantom'):
