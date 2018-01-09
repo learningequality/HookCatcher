@@ -1,0 +1,17 @@
+<html>
+    <body>
+      Welcome to the Health Inspector Home Page!
+
+      <h2> Need an account? <a href="{% url 'register' %}">Register</a> </h2>
+
+      {% if failed_attempt %}
+        Incorrect password or username entered. Please try again. Or register a new account
+      {% endif%}
+
+      <form action="{% url 'api_login' %}" method="POST"> {% csrf_token %}
+        Github Username: <input type="text" name="username"></br>
+        Password: <input type="password" name="password"></br>
+        <input type="submit" value="login">
+      </form>
+    </body>
+</html>

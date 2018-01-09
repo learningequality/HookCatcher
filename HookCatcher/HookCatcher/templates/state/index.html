@@ -1,0 +1,62 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+
+        {% load static %}
+        <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+
+        <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/style.css' %}"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+
+    <body>
+        {% if statesList %}
+
+        <div class="menu">
+            <div class="menuTitle">
+                <h3>learningequality/kolibri</h3>
+
+                <div>
+                    <p>
+                      {{state.gitType}} {{state.gitName}}<br>
+                    </p>
+                </div>
+
+
+
+            </div>
+            <div class="menuDetail">
+                <p>
+                  {{ statesList|length }} Total State{{ statesList|pluralize}}
+                </p>
+
+                <button class="menuButtons">
+                    Sort by Diff%
+                </button>
+
+                <button class="menuButtons">
+                    List View
+                </button>
+            </div>
+        </div>
+        <div class="listContainer">
+            <h2> All States </h2>
+            <table>
+                {%for state in statesList%}
+                <tr class="listItem">
+                    <td>
+                        <h4>{{state.name}}
+                        <a href="{% url 'singleCommit' gitCommitSHA=state.gitCommitSHA %}">
+                        {{state.gitRepo}} {{state.gitBranch}} {{state.gitCommitSHA}}</a></h4>
+                        <p>{{state.desc}}</p>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% else %}
+            <p> There are no states in the the system</p>
+        {% endif %}
+    </body>
+</html>

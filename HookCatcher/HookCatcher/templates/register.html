@@ -1,0 +1,25 @@
+<html>
+    <body>
+      <h3>Step 1:</h3>
+      <p> Register Health Inspector as a Github Integration on your Github: <a href="https://github.com/settings/apps">here</a>
+      </p>
+
+      <form action="{% url 'api_register' %}" method="POST">{% csrf_token %}
+
+        <h3>Step 2:</h3>
+        <p> Tell me about yourself:</p>
+        First Name: <input type="text" name="first_name"><br>
+        Last Name: <input type="text" name="last_name"><br>
+        Email: <input type="text" name="email"><br>
+        Password: <input type="password" name="password"><br>
+
+        <h3>Step 3:</h3>
+        <p>Provide the OAuth Credentials(located at the bottom of the page) of the Github integration you have just registered: </p>
+        Client ID: <input type="text" name="client_id"><br>
+        Client Secret: <input type="text" name="client_secret"><br>
+        <input type="submit" value="login">
+      </form>
+      <h5> Already have an account? <a href="{% url 'login' %}">Back to Login</a> </h5>
+
+    </body>
+</html>

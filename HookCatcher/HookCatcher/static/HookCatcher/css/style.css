@@ -1,0 +1,273 @@
+html, body
+{
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+div, p
+{
+    box-sizing: border-box;
+    margin: 0;
+}
+
+table, tr
+{
+    width: 100%;
+}
+
+a
+{
+    color:#0077be;
+}
+
+a:visited
+{
+    color:#0077be;
+}
+
+.menu
+{
+    background-color: orange;
+    width: 100%;
+    padding: 1rem;
+    margin-bottom: 3rem ;
+}
+
+.menuTitle
+{
+    display: flex;
+    justify-content: space-around;
+    font-size: 1.2rem;
+}
+
+.menuDetail
+{
+    display: flex;
+    justify-content: space-between;
+}
+
+.menuDetail button
+{
+
+}
+
+/* Dropdown Menu for resolutions */
+.dropdown
+{
+    position: relative;
+    display: inline-block;
+}
+
+.resDropdown
+{
+    display: none;
+    position: absolute;
+    overflow: auto;
+    z-index: 1;
+
+    background-color: white;
+    border: 0.1rem solid black;
+}
+
+.resDropdown a
+{
+    text-decoration: none;
+    display: block;
+    padding: .5rem 1rem;
+}
+
+.show
+{
+    display: block;
+}
+
+
+/* List style for listing database info */
+.listContainer
+{
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    width: 80%;
+}
+
+.listItem
+{
+    width:100%;
+    background-color: rgb(160, 219, 175);/*light green*/
+    border: .1rem solid black;
+}
+
+.listItem td
+{
+    padding: 1rem;
+    text-align: left;
+}
+
+.listItem td:nth-child(2)
+{
+    text-align: right;
+}
+
+.menuButtons
+{
+    padding: 1rem 1rem;
+}
+
+.thumbnail img
+{
+    width: 10rem;
+}
+
+.git_commit_text
+{
+    font-size: .75rem;
+    color: blue;
+    word-wrap: break-word;
+}
+
+.imgScreenshot
+{
+    border: .1rem solid black;
+    margin: 2rem auto;
+    max-width: 100%;
+    height: auto;
+    justify-content: center;
+}
+
+/* diff.html related */
+.diffBody{
+    display: flex;
+    margin: 0 auto;
+    width: 90%;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.diffContent
+{
+    margin: 0rem 1rem;
+    min-width: 50%;
+
+}
+
+.diffHeader
+{
+    width: 100%;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+}
+
+.diffContainer
+{
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    margin-bottom: 5rem;
+}
+
+.diffHalf
+{
+    width: 49.9%;
+    display: block;
+    border: 1px solid black;
+
+}
+
+.diffHalf img
+{
+    width: 100%;
+}
+
+.diffHalf p
+{
+    width: 100%;
+    font-size: 1.25rem;
+    text-align: center;
+    margin: 0;
+    border: 1px solid black;
+}
+
+.contentHeader
+{
+    width: 90%;
+    margin: auto;
+}
+
+.contentHeader a
+{
+    text-decoration: none;
+}
+
+/* for collapsing a 0% diff*/
+.collapseDiff + input{
+  display: none; /* hide the checkboxes */
+}
+.collapseDiff + input + .diffContainer{
+  display:none;
+}
+.collapseDiff + input:checked + .diffContainer{
+  display:flex;
+}
+
+
+/* loading animation for unloaded images in diff */
+.loading-spinner {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 10px;
+  color: #996189;
+
+}
+
+.loading-spinner > div {
+  background-color: #333;
+  height: 10%;
+  width: 6px;
+  display: inline-block;
+  -webkit-animation: sk-stretchdelay 1.2s infinite ease-in-out;
+  animation: sk-stretchdelay 1.2s infinite ease-in-out;
+}
+
+.loading-spinner .loading-rect2 {
+  -webkit-animation-delay: -1.1s;
+  animation-delay: -1.1s;
+}
+
+.loading-spinner .loading-rect3 {
+  -webkit-animation-delay: -1.0s;
+  animation-delay: -1.0s;
+}
+
+.loading-spinner .loading-rect4 {
+  -webkit-animation-delay: -0.9s;
+  animation-delay: -0.9s;
+}
+
+.loading-spinner .loading-rect5 {
+  -webkit-animation-delay: -0.8s;
+  animation-delay: -0.8s;
+}
+
+@-webkit-keyframes sk-stretchdelay {
+  0%, 40%, 100% { -webkit-transform: scaleY(0.4) }
+  20% { -webkit-transform: scaleY(1.0) }
+}
+
+@keyframes sk-stretchdelay {
+  0%, 40%, 100% {
+    transform: scaleY(0.4);
+    -webkit-transform: scaleY(0.4);
+  }  20% {
+    transform: scaleY(1.0);
+    -webkit-transform: scaleY(1.0);
+  }
+}

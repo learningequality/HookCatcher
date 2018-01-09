@@ -1,0 +1,178 @@
+html, body
+{
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+}
+
+div, p
+{
+    box-sizing: border-box;
+    margin: 0;
+}
+
+table, tr
+{
+    width: 100%;
+}
+
+a
+{
+    color:#0077be;
+}
+
+/* out-most container of all page content */
+.page_container{
+  margin: 1rem 5rem;
+}
+
+/* header showing github username */
+.user_bar{
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user_bar *{
+  margin: 0 0.5rem;
+}
+
+.breadcrumbs{
+  font-size:1.25rem;
+}
+
+.pr_title{
+  font-size: 1.5rem;
+  margin: 1rem 0rem;
+}
+
+
+/* NEW COMMIT DETECTED */
+.new_commit_block{
+  font-size: 1.2rem;
+}
+
+.new_generate_prompt{
+  font-size: 1.5rem;
+  margin: 0.5rem 0rem;
+}
+
+.new_generate_block{
+  margin: 0.5rem 2rem;
+}
+
+.new_commit_fork_block{
+  margin: 0.75rem 0rem;
+}
+
+.new_commit_fork_block input{
+  width: 25%;
+}
+
+.btn_new_generate{
+  font-size: 1.15rem;
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 2.5px;
+  padding: 0.5rem;
+  text-decoration: none;
+  color:#0077be;
+}
+
+
+/* Approve PR */
+.approve_header{
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.btn_approve_toggle a {
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 2.5px;
+  padding: 0.5rem;
+  text-decoration: none;
+}
+
+#approve_status{
+  font-size: 1.25rem;
+  margin: 0.25rem 0rem 1rem 0rem;
+}
+
+.pr_approve_subblock{
+  margin-left: 2rem;
+}
+
+/* HISTORY */
+.history_block{
+  margin: 1rem 0rem;
+}
+
+.history_block .history_window{
+  width: 100%;
+  height: 8rem;
+  border: 2px solid black;
+  overflow: scroll;
+}
+
+.diff_title{
+  margin: 1rem 0rem;
+  font-size: 1.5rem;
+}
+
+.diff_title .diff_header{
+  text-decoration: none;
+}
+
+
+
+/* diff images next to approval checkbox*/
+.diff_container{
+  margin-left: 2rem;
+}
+
+.diff_content{
+  display: flex;
+  flex-wrap: nowrap;
+  margin-bottom: 4rem;
+  justify-content: space-between;
+}
+
+.diff_content .left_half_diff{
+  flex: 30%;
+  margin-right: 2.5%;
+}
+
+.diff_content .right_half_diff{
+  flex: 60%;
+  margin-left: 2.5%;
+
+}
+
+.right_half_diff .diff_row
+{
+  display: flex;
+  flex-wrap: nowrap;
+
+}
+
+.right_half_diff .diff_row .diff_img_container img
+{
+  width: 100%;
+  height: auto;
+}
+
+.right_half_diff .diff_row .img_container img
+{
+  width: 100%;
+  height: auto;
+}
+
+.chkbox_approve_diff{
+  font-size: 1.25rem;
+}
+
+.diff_description p span{
+  font-size: 0.85rem;
+}
