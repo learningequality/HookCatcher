@@ -54,17 +54,16 @@ class State(models.Model):
     host_url = models.TextField(null=True, blank=True)
     login_username = models.CharField(max_length=200, null=True, blank=True)
     login_password = models.CharField(max_length=200, null=True, blank=True)
+    full_url = models.TextField(null=True, blank=True)
 
-    def get_full_url(self):
-        if self.host_url:
-            if self.state_url[0] != '/':
-                return self.host_url + self.state_url
+    def get_full_url(self, host_url):
+        if host_url:
+            if self.state_url[0] == '/':
+                return host_url + self.state_url
             else:
-                return os.path.join(self.host_url, self.state_url)
+                return host_url + '/' + self.state_url
         else:
             return self.state_url
-
-    full_url = property(get_full_url)
 
     def __str__(self):
         return '%s, %s:%s %s' % (self.state_name,
@@ -185,16 +184,15 @@ class History(models.Model):
 
     # record how many diffs were generated and how many still avaliable in history
     @classmethod
-    def log_initial_diffs(cls, pr_obj):
-        if len(pr_obj.get_diffs()) > 0:
+    def log_initial_diffs(cls, build_obj):
+        if len(build_obj.get_diffs()) > 0:
             approved_count = 0
-            for diff in pr_obj.get_diffs():
+            for diff in build_obj.get_diffs():
                 if diff.diff_percent == 0:
                     approved_count = approved_count + 1
             msg = '{0} Diffs were generated, of which {1} were automatically approved'.format(
-                  len(pr_obj.get_diffs()), approved_count)
-
-            cls(message=msg, pr=pr_obj).save()
+                  len(build_obj.get_diffs()), approved_count)
+            cls(message=msg, pr=build_obj.pr).save()
         return
 
     # record in history when a user manually approves of a diff (probably too granular)

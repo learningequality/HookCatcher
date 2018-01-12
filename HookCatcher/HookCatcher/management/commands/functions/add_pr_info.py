@@ -62,10 +62,9 @@ def saveStates(git_commit_obj, pr_obj):
 
     if (reqStatesList.status_code == 200):
         gitStatesList = json.loads(reqStatesList.text)
+
         # if stateList = 0, then exit as well because there are no states to add
         # if the states of this commit has already been added to database then don't add it again
-
-        # filter gitHash first
         if(State.objects.filter(git_commit=git_commit_obj).count() < len(gitStatesList)):
             # save the json content for each file of the STATES_FOLDER defined in user_settings
             for eachState in gitStatesList:
@@ -100,6 +99,7 @@ def saveCommit(gitRepoName, gitBranchName, gitCommitSHA):
                                   git_hash=gitCommitSHA)
 
 
+# usually is called through webhookHandler management command
 # arguments can either be: int(prNumber) or dict(payload)
 def add_pr_info(prnumber_payload):
     # function called: addPRinfo(prNumber)
@@ -130,9 +130,7 @@ def add_pr_info(prnumber_payload):
 
     '''
     NOTE: this will add a row to the Commit table even if there are no states
-    that are asssociated with the commit, storing unassociated Commit objects.
-    Same with the base of the PR
-
+    that are asssociated with the commit, storing potentially unassociated Commit objects.
     '''
 
     # head of the Pull Request save branch name and commitSHA
@@ -140,6 +138,8 @@ def add_pr_info(prnumber_payload):
     headBranchName = specificPR['head']['ref']
     headCommitObj = saveCommit(headRepoName, headBranchName, specificPR['head']['sha'])
 
+    # Single Source of Truth -> time of build
+    # github has a time listed for when this commit was updated to trigger this event
     last_updated = datetime.strptime(specificPR['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
 
     # if this PR already exists in the database yet
@@ -160,6 +160,7 @@ def add_pr_info(prnumber_payload):
                                  git_source_commit=headCommitObj)
             build_object.save()
     else:
+        # PR doesn't exist yet so create PR & Build objects
         pr_object = PR(git_repo=baseRepoName,
                        git_title=specificPR['title'],
                        git_pr_number=specificPR['number'])
@@ -172,6 +173,7 @@ def add_pr_info(prnumber_payload):
                              git_source_commit=headCommitObj)
         build_object.save()
 
+    # Search Git for the 'states' folders and if they exist, save those states to database
     if saveStates(baseCommitObj, pr_object) is False:
         build_object.status_code = 4  # error code for build
         build_object.save()
@@ -179,52 +181,4 @@ def add_pr_info(prnumber_payload):
     if saveStates(headCommitObj, pr_object) is False:
         build_object.status_code = 4  # error code for build
         build_object.save()
-    return
-
-
-'''
-REST OF THIS IS DEPRECATED FROM NEW_COMMIT_OLD_PR
-
-return nothing
-
-    # returns a dictionary of states that were added {'stateName1': (baseVers, headVers), ...}
-    # this list is to be sent to screenshot generator to be taken screenshot of
-    newStatesDict = defaultdict(list)
-    baseStatesList = State.objects.filter(git_commits=baseCommitObj)
-    # save the json state representations into the database and add added states to list
-    headStatesList = State.objects.filter(git_commit=headCommitObj)
-
-    # key is state_name because a single state may have two different urls depending on version
-    # if people name the state wrong this can cause errors in the system
-    for stateObjB in baseStatesList:
-        newStatesDict[stateObjB.state_name].append(stateObjB)
-    for stateObjH in headStatesList:
-        # {'key' : baseStateObj, headStateObj, 'key': ...}
-        newStatesDict[stateObjH.state_name].append(stateObjH)
-
-    # if this PR doesn't exist in the database yet
-    if(PR.objects.filter(git_pr_number=specificPR['number']).count() > 0):
-        old_pr_object = PR.objects.get(git_pr_number=specificPR['number'])
-        if (baseCommitObj.git_hash != old_pr_object.git_target_commit.git_hash or
-           headCommitObj.git_hash != old_pr_object.git_source_commit.git_hash):
-            print('New changes detected in PR #{0} Git Repo: "{1}/{2}"'.format(specificPR['number'],
-                                                                               baseRepoName,
-                                                                               baseBranchName))
-
-            new_commit_old_pr(old_pr_object, baseStatesList, headStatesList)
-            old_pr_object.git_target_commit = baseCommitObj
-            old_pr_object.git_source_commit = headCommitObj
-            old_pr_object.save()
-            # new_commit_old_pr already handles all the logic needed so don't go to diffs from pr
-            sys.exit(0)
-        else:  # do nothing because this is just a repeated call to a PR that didnt change
-            print('PR #{0} for Github Repo: "{1}/{2}" already exists'.format(specificPR['number'],
-                                                                             baseRepoName,
-                                                                             baseBranchName))
-    else:  # absolutely new PR is being added to models
-        # save information into the PR model
-        print("Successfully added PR {0}".format(specificPR['number']))
-
-    # newStatesDict = {'statename': (headObj, baseObj), 'statename1'...}
-    return {'states_list': newStatesDict, 'pr_object': pr_object, 'build_object': build_object}
-'''
+    return build_object

@@ -8,8 +8,7 @@ import tempfile
 
 import sh
 from django.conf import settings  # database dir
-from django.core.management.base import CommandError
-from HookCatcher.models import Diff, Image
+from HookCatcher.models import Diff
 
 
 # generates the appropriate name for the new diff image
@@ -108,17 +107,10 @@ def validate_diff(diff_tool, img1, img2):
 
 
 # most outfacing command that adds diff to the database models and generates the diff
-def gen_diff(img_name1, img_name2, diff_tool='imagemagick'):
-    try:
-        # Make sure these images exist in the image database
-        img1 = Image.objects.get(img_file=img_name1)  # target screenshot
-        img2 = Image.objects.get(img_file=img_name2)  # source screenshot
-    except Image.DoesNotExist:
-        raise CommandError('At least one of the two images does not exist in the database')
-
+def gen_diff(img_obj1, img_obj2, diff_tool='imagemagick'):
     # if there is a valid diff method picked
     if str(diff_tool).lower() == 'imagemagick':
-        validate_diff(str(diff_tool).lower(), img1, img2)
+        validate_diff(str(diff_tool).lower(), img_obj1, img_obj2)
     else:
         print('{0} is not an image diffing option'.format(diff_tool))
     return

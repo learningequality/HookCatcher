@@ -17,7 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
-from .models import PR, Commit, Diff, Image, Profile, State
+from .models import PR, Commit, Diff, History, Image, Profile, State
 
 
 # representation for models so you don't have to change every value for models in every template
@@ -183,7 +183,7 @@ def projects(request):
         # unique_repos = git_list_repositories(request.user.profile.git_access_token)
         return render(request, 'projects/index.html', {
             'repoList': unique_repos,
-            })
+        })
     else:
         return redirect('login')
 
@@ -383,6 +383,9 @@ def view_pr(request, repo_name, pr_number):
     latest_build = pr_obj.get_latest_build()
     completed_build = pr_obj.get_last_executed_build()
 
+    if completed_build and completed_build.status_code == 1:
+        completed_build = None
+
     # if they are the same then only show completed_build
     if latest_build == completed_build:
         latest_build = None
@@ -523,14 +526,14 @@ def api_register(request):
 @csrf_exempt
 @require_POST
 def webhook(request):
-    print 'webhook coming in'
+    print 'git payload webhook coming in'
     try:
         payload = json.loads(request.body)
         act = payload['action']
         print('github action: ', act)
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
+            History.log_pr_action(payload['pr_number'], act, request.user)
             call_command('webhookHandler', payload['number'])
-
         return HttpResponse(status=200)
     except:
         # github webhook error

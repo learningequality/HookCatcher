@@ -107,11 +107,11 @@
               </form>
               <div class="diff_description">
                 <p>State Name: <span>{{diff.target_img.state.state_name}}</span></p>
-                {% if diff.target_img.state.state_url ==  diff.source_img.state.state_url%}
-                  <p>URL: <span>{{diff.target_img.state.state_url}}</span></p>
+                {% if diff.target_img.state.full_url ==  diff.source_img.state.full_url%}
+                  <p>URL: <span>{{diff.target_img.state.full_url}}</span></p>
                 {% else %}
-                  <p>Before URL: <span>{{diff.target_img.state.state_url}}</span></p>
-                  <p>After URL: <span>{{diff.source_img.state.state_url}}</span></p>
+                  <p>Before URL: <span>{{diff.target_img.state.full_url}}</span></p>
+                  <p>After URL: <span>{{diff.source_img.state.full_url}}</span></p>
                 {% endif %}
                 <p>Resolution: <span>{{diff.target_img.device_res_width}}x{{diff.target_img.device_res_height}}</span></p>
               </div>
@@ -166,7 +166,7 @@
               </form>
               <div class="diff_description">
                 <p>State Name: <span>{{image.state.state_name}}</span></p>
-                <p>URL: <span>{{image.state.state_url}}</span></p>
+                <p>URL: <span>{{image.state.full_url}}</span></p>
                 <p>Resolution: <span>{{image.device_res_width}}x{{image.device_res_height}}</span></p>
               </div>
             </div>
@@ -210,7 +210,7 @@
               </form>
               <div class="diff_description">
                 <p>State Name: <span>{{image.state.state_name}}</span></p>
-                <p>URL: <span>{{image.state.state_url}}</span></p>
+                <p>URL: <span>{{image.state.full_url}}</span></p>
                 <p>Resolution: <span>{{image.device_res_width}}x{{image.device_res_height}}</span></p>
               </div>
             </div>
@@ -254,11 +254,11 @@
               </form>
               <div class="diff_description">
                 <p>State Name: <span>{{diff.target_img.state.state_name}}</span></p>
-                {% if diff.target_img.state.state_url ==  diff.source_img.state.state_url %}
-                  <p>URL: <span>{{diff.target_img.state.state_url}}</span></p>
+                {% if diff.target_img.state.full_url ==  diff.source_img.state.full_url %}
+                  <p>URL: <span>{{diff.target_img.state.full_url}}</span></p>
                 {% else %}
-                  <ptarget"_blank">Before URL: <span>{{diff.target_img.state.state_url}}</span></p>
-                  <p>After URL: <span>{{diff.source_img.state.state_url}}</span></p>
+                  <ptarget"_blank">Before URL: <span>{{diff.target_img.state.full_url}}</span></p>
+                  <p>After URL: <span>{{diff.source_img.state.full_url}}</span></p>
                 {% endif %}
                 <p>Resolution: <span>{{diff.target_img.device_res_width}}x{{diff.target_img.device_res_height}}</span></p>
               </div>
