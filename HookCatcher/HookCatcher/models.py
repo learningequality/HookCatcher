@@ -80,12 +80,12 @@ class PR(models.Model):
 
     # when a new commit is added to the PR but nothing done with that commit yet
     def get_latest_build(self):
-        all_builds = self.build_set.all().order_by('-date_time')
+        all_builds = self.build_set.all().order_by('-date_time', '-pr_version')
         return all_builds.first()
 
     # use this method thiso display the last processed build information of a PR
     def get_last_executed_build(self):
-        all_builds = self.build_set.all().filter(~Q(status_code=0)).order_by('-date_time')  # noqa: E501
+        all_builds = self.build_set.all().filter(~Q(status_code=0)).order_by('-date_time', '-pr_version')  # noqa: E501
         if len(all_builds) > 0:
             return all_builds.first()
         else:
@@ -206,8 +206,7 @@ class History(models.Model):
     # record in history any internal system errors
     @classmethod
     def log_sys_error(cls, pr_obj, error_message):
-        msg = 'INTERNAL SYSTEM ERROR: {0}'.format(error_message)
-        cls(message=msg, pr=pr_obj, is_error=True).save()
+        cls(message=error_message, pr=pr_obj, is_error=True).save()
         return
 
     def __str__(self):

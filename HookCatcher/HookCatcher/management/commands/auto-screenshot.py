@@ -21,22 +21,12 @@ class Command(BaseCommand):
         new_base = options['base_commit']
         new_head = options['head_commit']
 
-        # for some reason the pr number was not recorded previously from a webhook
-        if PR.objects.filter(git_pr_number=pr_number).count() < 1:
-            # check if the build with these commits on this PR already exists
+        try:
+            build = Build.objects.get(pr=PR.objects.get(git_pr_number=pr_number),
+                                      git_target_commit=Commit.objects.get(git_hash=new_base),
+                                      git_source_commit=Commit.objects.get(git_hash=new_head))
+        except PR.DoesNotExist, Commit.DoesNotExist:
             build = add_pr_info(pr_number)
-        else:
-            find_build = Build.objects.filter(pr=PR.objects.get(git_pr_number=pr_number),
-                                              git_target_commit=Commit.objects.get(git_hash=new_base),  # noqa: E501
-                                              git_source_commit=Commit.objects.get(git_hash=new_head))  # noqa: E501
-            # this is a new build
-            if find_build.count() < 1:
-                # runs most recent commits EVEN IF =/= head_commit & base_commit
-                build = add_pr_info(pr_number)  # retrieves metadata for latest build of this PR
-            else:
-                build = Build.objects.get(pr=PR.objects.get(git_pr_number=pr_number),
-                                          git_target_commit=Commit.objects.get(git_hash=new_base),
-                                          git_source_commit=Commit.objects.get(git_hash=new_head))
 
         '''
         USE CASE: when do we wan users to generate diffs for a particular build

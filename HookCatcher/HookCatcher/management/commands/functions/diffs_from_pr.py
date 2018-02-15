@@ -7,17 +7,21 @@
         ~ If no states are even checked in, do nothing.
         ~ if PR number isn''t valid, do nothing
 '''
+import logging
 import os
 import time
 from collections import defaultdict
 
 import django_rq
 from add_screenshots import add_screenshots
+from channels import Group
 from HookCatcher.management.commands.functions.gen_diff import (gen_diff,
                                                                 imagemagick)
 from HookCatcher.models import Build, Diff, History
 
 RQ_QUEUE = django_rq.get_queue('default')
+LOGGER = logging.getLogger(__name__)
+
 
 UNINITIATED_BUILD_STATUS_CODE = 0
 IN_PROGRESS_BUILD_STATUS_CODE = 1
@@ -71,8 +75,8 @@ def transfer_old_build_data_to_new_build(img_pairs_dict, old_build):
                         imagemagick_result = imagemagick(old_img_path, new_img_path)
                         if imagemagick_result == 0:
                             # delete the no longer linked new image
-                            print 'Deleting Redundant Image: {0} since it is equal to: {1}'.format(
-                                  new_img_path, old_img_path)
+                            LOGGER.info('Deleting Redundant Image: {0} since it is equal to: {1}'.format(  # noqa: E501
+                                        new_img_path, old_img_path))
 
                             if os.path.exists(new_img_path):
                                 os.remove(new_img_path)
@@ -109,7 +113,7 @@ def generate_diffs(img_type, build_obj):
                                         diff_percent=old_diff_obj.diff_percent,
                                         is_approved=old_diff_obj.is_approved)
                     new_diff_obj.save()
-                    print('A Duplicate Diff was found from previous commits on this PR. Approval coppied over')  # noqa: E501
+                    LOGGER.debug('A Duplicate Diff was found from previous commits on this PR. Approval coppied over')  # noqa: E501
             # For some reason in the past a diff was never generated when it could have ...
             # generate a new diff cuz for some reason there is no old diff object..
             # doesn't try to change old build to have a diff object
@@ -142,7 +146,7 @@ def generate_diffs(img_type, build_obj):
     else:  # len(img_type) > 2
         msg = 'No Diff could be made. There were more than one state with the same name "{0}". Please fix this.'.format(  # noqa: E501
               img_type[0].state.state_name)
-        print msg
+        LOGGER.error(msg)
         History.log_sys_error(build_obj.pr, msg)
         return ERROR_BUILD_STATUS_CODE  # return status code = 4 (error)
     return COMPLETED_BUILD_STATUS_CODE
@@ -155,7 +159,7 @@ def generate_images(states_list, build_obj):
     img_dict = defaultdict(list)  # {'key': [<ImgObj1>, <ImgObj2>], 'key2': [...}
 
     for single_state in states_list:  # should run two times
-        print 'RUN ADDD SCREENSHOT FOR ' + single_state.state_name
+        LOGGER.debug('RUN ADDD SCREENSHOT FOR ' + single_state.state_name)
         img_list = add_screenshots(single_state)
 
         for i in img_list:
@@ -169,9 +173,7 @@ def generate_images(states_list, build_obj):
     if img_dict:
         return img_dict, None
     else:
-        msg = 'There was an error in the config file or screenshot process so no image was taken'  # noqa: E501
-        print msg
-        History.log_sys_error(build_obj.pr, msg)
+        # There was an error in the config file or screenshot process so no image was taken
         return None, ERROR_BUILD_STATUS_CODE  # return status code for this message
 
 
@@ -183,7 +185,8 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
 
     # enqueue the job of taking screenshots should return a img_dict prepared for diffing
     img_Q = lambda states_list: RQ_QUEUE.enqueue(generate_images, states_list, build)  # noqa: E731, E501
-    print('Generating screenshots of states...')
+    LOGGER.info('Generating screenshots of states...')
+
     # base states
     base_imgs = img_Q(base_states_list)
     head_imgs = img_Q(head_states_list)
@@ -202,7 +205,7 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
     base_imgs_status_code = base_imgs.result[1]
     if base_imgs_dict:  # if its an actual img dictionary
         for b_img_key in base_imgs_dict:
-            for img_obj in base_imgs.result[b_img_key]:
+            for img_obj in base_imgs_dict[b_img_key]:
                 img_pairs_dict[b_img_key]['BASE'].append(img_obj)
     # IF there are any error outs while screenshotting
     elif base_imgs_dict is None and base_imgs_status_code:
@@ -213,7 +216,7 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
     head_imgs_status_code = head_imgs.result[1]
     if head_imgs_dict:  # if its an actual img dictionary
         for h_img_key in head_imgs_dict:
-            for img_obj in head_imgs.result[h_img_key]:
+            for img_obj in head_imgs_dict[h_img_key]:
                 img_pairs_dict[h_img_key]['HEAD'].append(img_obj)
     # IF there are any error outs while screenshotting
     elif head_imgs_dict is None and head_imgs_status_code:
@@ -222,12 +225,12 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
 
     # if there is an old build, try to copy over information to this build
     if old_build_id is not None:
-        print('Transfering approvals from previous build...')
+        LOGGER.info('Transfering approvals from previous build...')
         old_build = Build.objects.get(id=old_build_id)
         transfer_old_build_data_to_new_build(img_pairs_dict, old_build)
 
     diff_Q = lambda img_type: RQ_QUEUE.enqueue(generate_diffs, img_type, build)  # noqa: E731
-    print('Diffing screenshots...')
+    LOGGER.info('Diffing screenshots...')
 
     diff_jobs = [diff_Q(img_pairs_dict[img_key]) for img_key in img_pairs_dict]
     while not all(d_job.result for d_job in diff_jobs):
@@ -246,13 +249,27 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
                 build.status_code = d.result
                 build.save()
 
-    # TODO NEED TO CHANGE STATUS CODE HANDLING TO NOT PASS BUILD OBJ
     # if there wasnt an error throughout the process then it succeeded!
     if not (build.status_code == ERROR_BUILD_STATUS_CODE or
        build.status_code == CANCELLED_BUILD_STATUS_CODE):
         History.log_initial_diffs(build)
-        print('Completed screenshoting procedure successfully!')
-    print('Error occured with the screenshoting procedure!')
+        LOGGER.info('Completed screenshoting procedure successfully!')
+    else:
+        LOGGER.info('An error occured during the screenshotting procedure!')
+
+    Group("ws").send({
+        "text": str(build.status_code),
+    })
+
+
+# TODO WRAPPER NECESSARY?
+def redis_entrypoint_wrapper(base_states_list, head_states_list, build_id, old_build_id=None):
+    try:
+        redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id)
+    except:
+        # log log log
+        build = Build.objects.get(id=build_id)
+        build.status_code = ERROR_BUILD_STATUS_CODE
 
 
 # get all the right information to start diffing
@@ -263,6 +280,10 @@ def diffs_from_pr(pr_obj, base_states_list, head_states_list):
 
     latest_build.status_code = IN_PROGRESS_BUILD_STATUS_CODE  # status code 1
     latest_build.save()
+
+    Group("ws").send({
+        "text": str(latest_build.status_code),
+    })
 
     # if new build for an existing pr, do special cases to copy relevant image data over
     if (previous_build and latest_build is not previous_build):
@@ -276,4 +297,6 @@ def diffs_from_pr(pr_obj, base_states_list, head_states_list):
                          base_states_list,
                          head_states_list,
                          latest_build.id)
+
+    # does not check if the redis_entrypoint fuction crashes to change status code to 3
     return

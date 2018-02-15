@@ -3,12 +3,15 @@ GOAL: Low level command that DIFFs two images with a choice of methods
 given: two images PATHS, diff them with a method of choice
 return: diff image of two screenshots of a single state
 '''
+import logging
 import os
 import tempfile
 
 import sh
 from django.conf import settings  # database dir
 from HookCatcher.models import Diff
+
+LOGGER = logging.getLogger(__name__)
 
 
 # generates the appropriate name for the new diff image
@@ -59,7 +62,7 @@ def imagemagick(img1_path, img2_path, diff_name="", diff_obj=None):
                 if diff_obj.diff_percent == 0:
                     diff_obj.is_approved = True
                 diff_obj.diff_img_file.save(diff_name, temp_diff, save=True)
-                print('Finished adding new Diff named: "{0}"'.format(diff_obj.diff_img_file.path))
+                LOGGER.debug('Finished adding new Diff named: "{0}"'.format(diff_obj.diff_img_file.path))  # noqa: E501
     return diff_percent
 
 
@@ -86,9 +89,9 @@ def validate_diff(diff_tool, img1, img2):
                         imagemagick(img1_path, img2_path, diff_name, duplicate_diff)
                         return duplicate_diff
                     else:
-                        print('{0} is not an image diffing option'.format(diff_tool))
+                        LOGGER.error('{0} is not an image diffing option'.format(diff_tool))
                 else:
-                    print('Perceptual diff "{0}" already exists'.format(duplicate_diff.diff_img_file.name))  # noqa: E501
+                    LOGGER.debug('Perceptual diff "{0}" already exists'.format(duplicate_diff.diff_img_file.name))  # noqa: E501
             except Diff.DoesNotExist:
                 # if there is no duplicate in the database, make one in db and generate diff
                 placeholer_diff = Diff(diff_img_file=None,
@@ -100,9 +103,9 @@ def validate_diff(diff_tool, img1, img2):
             # a new diff was not generated
             return
         else:
-            print('The second image: "{0}" to be compared does not exist'.format(img2_path))
+            LOGGER.error('The second image: "{0}" to be compared does not exist'.format(img2_path))
     else:
-        print ('The first image: "{0}"  to be compared does not exist'.format(img1_path))
+        LOGGER.error('The first image: "{0}"  to be compared does not exist'.format(img1_path))
     return
 
 
@@ -112,5 +115,5 @@ def gen_diff(img_obj1, img_obj2, diff_tool='imagemagick'):
     if str(diff_tool).lower() == 'imagemagick':
         validate_diff(str(diff_tool).lower(), img_obj1, img_obj2)
     else:
-        print('{0} is not an image diffing option'.format(diff_tool))
+        LOGGER.error('{0} is not an image diffing option'.format(diff_tool))
     return

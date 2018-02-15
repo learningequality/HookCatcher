@@ -1,10 +1,11 @@
 import json
+import logging
 import os
 import urllib
 
 import django_rq
 import requests
-
+from channels import Group
 from django.conf import settings  # database dir
 from django.contrib.auth import login as login_auth
 from django.contrib.auth import logout as logout_auth
@@ -18,6 +19,18 @@ from django.views.decorators.http import require_POST
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
 from .models import PR, Commit, Diff, History, Image, Profile, State
+
+# Logger variable to record such things
+LOGGER = logging.getLogger(__name__)
+
+
+def test_websocket(request):
+    msg = str(request.GET['val'])
+    Group("ws").send({
+        "text": msg,
+    })
+
+    return HttpResponse(200)
 
 
 # representation for models so you don't have to change every value for models in every template
@@ -127,7 +140,7 @@ def login(request, failed_attempt=False):
     if failed_attempt == 'False':
         failed_attempt = False
     return render(request, 'login.html', {
-            'failed_attempt': failed_attempt,
+        'failed_attempt': failed_attempt,
     })
 
 
@@ -269,7 +282,7 @@ def singlePR(request, pr_number, repo_name="", res_width="0", res_height="0"):
             head_state = State.objects.get(state_name=base_state.state_name,
                                            git_commit=PR_obj.git_source_commit)
         except:
-            print("Base State:{0} has no equivalent state in the Head of the PR".format(base_state.state_name))  # noqa: ignore=E501
+            LOGGER.info("Base State:{0} has no equivalent state in the Head of the PR".format(base_state.state_name))  # noqa: ignore=E501
             continue  # the next steps all rely on existence of a head and a base state
 
         # get a list of the different resolutions avaliable for the particular PR
@@ -526,11 +539,10 @@ def api_register(request):
 @csrf_exempt
 @require_POST
 def webhook(request):
-    print 'git payload webhook coming in'
     try:
         payload = json.loads(request.body)
         act = payload['action']
-        print('github action: ', act)
+        LOGGER.info('Github action dectected: ', act)
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
             History.log_pr_action(payload['pr_number'], act, request.user)
             call_command('webhookHandler', payload['number'])
@@ -547,13 +559,13 @@ def browserstack_callback(request, img_id):
         # get the payload from the callback
         bs_payload = json.loads(request.body)
     except Exception, e:
-        print(str(e))
+        LOGGER.error(str(e))
         return HttpResponse(status=500)
 
     # get the image object that has currently null image file and update it with bs url
     img_obj = Image.objects.get(id=img_id)
     img_obj.img_file = bs_payload['screenshots'][0]['image_url']
-    print("BROWSER STACK image {0} completed rendering".format(img_obj.img_file.name))
+    LOGGER.debug("BROWSER STACK image {0} completed rendering".format(img_obj.img_file.name))
     img_obj.save()
 
     dependent_diffs = img_obj.target_img_in_Diff.all() | img_obj.source_img_in_Diff.all()
@@ -562,7 +574,7 @@ def browserstack_callback(request, img_id):
                 diff.target_img.image_rendered() and
                 diff.source_img.image_rendered()):
 
-            print 'Discovered new Diff to create ...'
+            LOGGER.debug('Discovered new Diff to create ...')
             django_rq.get_queue('default').enqueue(gen_diff,
                                                    diff.target_img.img_file.name,
                                                    diff.source_img.img_file.name)

@@ -24,6 +24,7 @@ urlpatterns = [
     # Internal APIs
     url(r'^api/register/$', views.api_register, name='api_register'),
     url(r'^api/login/$', views.api_login, name='api_login'),
+    url(r'^api/test_websocket/$', views.test_websocket, name='test_websocket'),
 
     url(r'^api/logout/$', views.api_logout, name='api_logout'),
     url(r'^api/generate_diffs/(?P<repo_name>[a-zA-Z0-9%]+)/(?P<pr_number>[0-9]+)/(?P<base_commit>[a-zA-Z0-9]+)/(?P<head_commit>[a-zA-Z0-9]+)/$',  # noqa: E501
