@@ -156,7 +156,7 @@ LOGGING = {
         },
         'HookCatcher': {
             'handlers': ['console', 'logfile'],
-            'level': 'ERROR',
+            'level': 'WARN',
         },
     }
 }
@@ -211,6 +211,9 @@ DATABASES = {
     }
 }
 
+REDIS_HOST = os.getenv("REDIS_HOST") or "127.0.0.1"
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or ''
+
 # try to get the env variable for Redis port
 REDIS_PORT = os.getenv('REDIS_PORT')
 if not REDIS_PORT:
@@ -218,20 +221,23 @@ if not REDIS_PORT:
 
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
-        'PORT': REDIS_PORT,
+        'HOST': REDIS_HOST,
+        'PORT': int(REDIS_PORT),
         'DB': 0,
-        'PASSWORD': '',
+        'PASSWORD': REDIS_PASSWORD,
         'DEFAULT_TIMEOUT': 360,
     },
 }
 
+REDIS_URL = "redis://{1}:{2}/0".format(REDIS_PASSWORD,
+                                       REDIS_HOST,
+                                       REDIS_PORT)
 # Django Channels
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "asgi_redis.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("localhost", 6379)],
+            "hosts": [(REDIS_URL)],
         },
         "ROUTING": "HookCatcherProj.routing.channel_routing",
     },

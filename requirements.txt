@@ -1,6 +1,8 @@
 flake8
 pre-commit
 appdirs==1.4.0
+asgi-redis==1.4.3
+channels==1.1.8
 Django==1.10.5
 django-rq==0.9.6
 Pillow==4.2.1

@@ -1,0 +1,13 @@
+dependencies:
+  - name: postgresql
+    version: 0.8.1
+    repository: https://kubernetes-charts.storage.googleapi.com
+    import-values:
+      - child: service
+        parent: postgresqlservice
+  - name: redis
+    version: 0.10.1
+    repository: https://kubernetes-charts.storage.googleapis.com
+    import-values:
+      - child: service
+        parent: redisservice

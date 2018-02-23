@@ -1,9 +1,9 @@
+repos:
 - repo: git://github.com/pre-commit/pre-commit-hooks
-  sha: 97b88d9610bcc03982ddac33caba98bb2b751f5f
+  sha: v0.9.1
   hooks:
   - id: trailing-whitespace
   - id: flake8
-  - id: check-yaml
   - id: debug-statements
   - id: end-of-file-fixer
 - repo: git://github.com/FalconSocial/pre-commit-python-sorter
