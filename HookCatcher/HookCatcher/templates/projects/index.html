@@ -1,11 +1,11 @@
 <html>
     <body>
-        {% if repoList %}
+        {% if prList %}
           Following Git Repos:
 
-          {% for repo in repoList %}
-            <a href="{% url 'listPR' repo|urlencode:"" %}">
-            {{repo}}</a>
+          {% for pr in prList %}
+            <a href="{% url 'listPR' pr.git_repo|urlencode:"" %}">
+            {{pr.git_repo}}</a>
           {% endfor %}
 
         {% else %}

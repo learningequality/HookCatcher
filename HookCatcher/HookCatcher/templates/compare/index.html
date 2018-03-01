@@ -36,10 +36,7 @@
                     <td>
                         <h4><a href="{% url 'view_pr' repo_name=gitRepo|urlencode:"" pr_number=pr.git_pr_number %}">
                         {{pr.git_repo}} PR #{{pr.git_pr_number}}</a></h4>
-                        <p>Base:{{pr.git_target_commit.git_repo}}
-                        ,
-                        Head:{{pr.git_source_commit.git_repo}}
-                        </p>
+                        {{pr.git_title}}
                     </td>
 
                 </tr>

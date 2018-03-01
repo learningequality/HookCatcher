@@ -7,9 +7,9 @@ import django_rq
 import requests
 from channels import Group
 from django.conf import settings  # database dir
+from django.contrib.auth import authenticate
 from django.contrib.auth import login as login_auth
 from django.contrib.auth import logout as logout_auth
-from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.core.management import call_command  # call newPR update command
 from django.http import HttpResponse
@@ -192,10 +192,10 @@ def git_list_repositories(git_access_token):
 
 def projects(request):
     if request.user.is_authenticated:
-        unique_repos = Commit.objects.order_by().values('git_repo').distinct()
+        unique_repos = PR.objects.order_by().values('git_repo').distinct()
         # unique_repos = git_list_repositories(request.user.profile.git_access_token)
         return render(request, 'projects/index.html', {
-            'repoList': unique_repos,
+            'prList': unique_repos,
         })
     else:
         return redirect('login')
@@ -281,7 +281,7 @@ def singlePR(request, pr_number, repo_name="", res_width="0", res_height="0"):
         try:
             head_state = State.objects.get(state_name=base_state.state_name,
                                            git_commit=PR_obj.git_source_commit)
-        except:
+        except State.DoesNotExist:
             LOGGER.info("Base State:{0} has no equivalent state in the Head of the PR".format(base_state.state_name))  # noqa: ignore=E501
             continue  # the next steps all rely on existence of a head and a base state
 
@@ -403,6 +403,8 @@ def view_pr(request, repo_name, pr_number):
     if latest_build == completed_build:
         latest_build = None
 
+    print completed_build
+
     if completed_build:
         diff_types = get_all_diff_types_of_build(completed_build)
         return render(request, 'projects/pull/view_pr.html', {
@@ -521,18 +523,24 @@ def api_login(request):
 
 @require_POST
 def api_register(request):
-    request.session['client_id'] = request.POST['client_id']
-    request.session['client_secret'] = request.POST['client_secret']
+    # request.session['client_id'] = request.POST['client_id']
+    # request.session['client_secret'] = request.POST['client_secret']
 
-    request.session['first_name'] = request.POST['first_name']
-    request.session['last_name'] = request.POST['last_name']
-    request.session['email'] = request.POST['email']
+    first_name = request.POST['first_name']
+    last_name = request.POST['last_name']
+    email = request.POST['email']
+    username = request.POST['username']
+    password = request.POST['password']
 
-    request.session['password'] = request.POST['password']
-
-    git_oauth_url = 'https://github.com/login/oauth/authorize?client_id={0}'\
-                    .format(request.POST['client_id'])
-    return redirect(git_oauth_url)
+    # git_oauth_url = 'https://github.com/login/oauth/authorize?client_id={0}'\
+    # .format(request.POST['client_id'])
+    if username and User.objects.filter(username=username).count() < 1:
+        User.objects.create_user(username=username,
+                                 password=password,
+                                 email=email,
+                                 first_name=first_name,
+                                 last_name=last_name)
+    return redirect('login', False)
 
 
 # run the new pr command when the webhook detects a PullRequestEvent
@@ -547,7 +555,7 @@ def webhook(request):
             History.log_pr_action(payload['pr_number'], act, request.user)
             call_command('webhookHandler', payload['number'])
         return HttpResponse(status=200)
-    except:
+    except ValueError:
         # github webhook error
         return HttpResponse(status=500)
 

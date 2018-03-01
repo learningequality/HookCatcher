@@ -22,25 +22,40 @@ const imgHeight = argv.imgHeight || 600;
 const urlParts = url.split('#');
 const targetURL = urlParts[0];
 
-const host = targetURL.substring(0, (targetURL.indexOf('.org/') + 5)); // just the host name
-const signinPath = 'user';
+const host = getHostName(targetURL); // just the host name
+
+const signinPath = '/user';
 const signinURL = host + signinPath;
 
-function validURL(value) {
-  return /^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:[/?#]\S*)?$/i.test(value);
+function getHostName(url) {
+    var match = url.match(/(ftp|http|https):\/\/(www[0-9]?\.)?(.[^/:]+)/i);
+    console.log(match);
+    console.log(match.length);
+
+    if (match != null && match.length > 3 && typeof match[3] === 'string' && match[3].length > 0) {
+      return match[1] + '://' + match[3];
+    }
+    else {
+        return null;
+    }
+}
+
+function validURL(s) {
+    var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
+    return regexp.test(s);
 }
 
 if (! (validURL(url) && validURL(targetURL)) ){
-  console.log(argv.url)
   console.log("Puppeteer: URL '" + url + "'is not a valid URL for screenshotting");
   process.exit(1);
 }
 
 (async () => {
-    const browser = await puppeteer.launch({headless: true});
+    const browser = await puppeteer.launch({headless: false});
     const page = await browser.newPage();
     await page.setViewport({width: imgWidth, height: imgHeight});
 
+    console.log(validURL(signinURL));
     if (validURL(signinURL)){
       console.log('configuring UI for ' + signinURL);
       // First, go directly to the sign in page to login then the target pages
@@ -53,7 +68,8 @@ if (! (validURL(url) && validURL(targetURL)) ){
 
         await page.click('button[type=submit]', {waitUntil: 'networkidle2'});
         await page.waitForNavigation({waitUntil: 'networkidle2'});  // button redirects
-      }catch (e){}
+      }catch (e){
+      }
     }
 
     try{
@@ -63,7 +79,7 @@ if (! (validURL(url) && validURL(targetURL)) ){
       console.log('actual page ' + url);
       await page.goto(url, {timeout: 3000});
       //wait 2 second if still same url wait till navigation over
-      console.log(page.url())
+      console.log(page.url());
       if (page.url() == url){
         await page.waitForNavigation({timeout: 3000, waitUntil: 'networkidle2'});
       }else{
