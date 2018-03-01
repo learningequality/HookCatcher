@@ -18,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from HookCatcher.management.commands.functions.gen_diff import gen_diff
 
-from .models import PR, Commit, Diff, History, Image, Profile, State
+from .models import PR, Commit, Diff, Image, Profile, State
 
 # Logger variable to record such things
 LOGGER = logging.getLogger(__name__)
@@ -552,8 +552,8 @@ def webhook(request):
         act = payload['action']
         LOGGER.info('Github action dectected: ', act)
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
-            History.log_pr_action(payload['pr_number'], act, request.user)
-            call_command('webhookHandler', payload['number'])
+            # History.log_pr_action(payload['pull_request']['number'], act, request.user)
+            call_command('webhookHandler', payload['pull_request']['number'])
         return HttpResponse(status=200)
     except ValueError:
         # github webhook error
