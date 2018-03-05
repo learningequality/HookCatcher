@@ -117,7 +117,7 @@ MEDIA_URL = '/media/'
 # Using Loggers instead of print statements for console output!
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
         'standard': {
             'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
@@ -138,7 +138,7 @@ LOGGING = {
             'formatter': 'standard',
         },
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'standard'
         },
@@ -147,16 +147,15 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'propagate': True,
-            'level': 'WARN',
         },
         'django.db.backends': {
             'handlers': ['console'],
-            'level': 'DEBUG',
             'propagate': False,
+            'level': 'WARN',
         },
         'HookCatcher': {
             'handlers': ['console', 'logfile'],
-            'level': 'WARN',
+            'level': 'DEBUG',
         },
     }
 }

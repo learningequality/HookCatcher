@@ -149,21 +149,26 @@ def add_pr_info(prnumber_payload):
     # TODO: is this an assumption? specificPR['number'])[0]
     pr_object = PR.objects.get_or_create(git_repo=baseRepoName,
                                          git_title=specificPR['title'],
-                                         git_pr_number=specificPR['number'])[0]
-    LOGGER.info('Saving Github metadata for Pull Request #{0}'.format(specificPR['number'])[0])
+                                         git_pr_number=specificPR['number'])[0]  # tuple
 
-    # Single Source of Truth of which build is newest-> time PR was changed from Github
-    # github has a time listed for when this commit was updated to trigger this event
-    last_updated = datetime.strptime(specificPR['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
+    try:
+        build_object = Build.objects.get(pr=pr_object,
+                                         git_target_commit=baseCommitObj,
+                                         git_source_commit=headCommitObj)
+        LOGGER.error('Using exisiting metadata for Pull Request #{0}'.format(specificPR['number']))
+    except Build.DoesNotExist:
+        # Single Source of Truth of which build is newest-> time PR was changed from Github
+        # github has a time listed for when this commit was updated to trigger this event
+        last_updated = datetime.strptime(specificPR['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
 
-    build_object = Build.objects.get_or_create(pr=pr_object,
-                                               pr_version=len(pr_object.build_set.all()),
-                                               date_time=last_updated,
-                                               git_target_commit=baseCommitObj,
-                                               git_source_commit=headCommitObj)[0]
+        Build.objects.create(pr=pr_object,
+                             pr_version=len(pr_object.build_set.all()),
+                             date_time=last_updated,
+                             git_target_commit=baseCommitObj,
+                             git_source_commit=headCommitObj)
+        LOGGER.error('Saving Github metadata for Pull Request #{0}'.format(specificPR['number']))
 
     ERROR_BUILD_STATUS_CODE = 4  # to show the build has some issues with it
-
     # Search Git for the 'states' folders and if they exist, save those states to database
     if saveStates(baseCommitObj, pr_object) is False:
         build_object.status_code = ERROR_BUILD_STATUS_CODE

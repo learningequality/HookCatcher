@@ -19,19 +19,12 @@ const imgWidth  = argv.imgWidth || 800;
 const imgHeight = argv.imgHeight || 600;
 
 //extract host for Sign In URL
-const urlParts = url.split('#');
-const targetURL = urlParts[0];
-
-const host = getHostName(targetURL); // just the host name
-
-const signinPath = '/user';
+const host = getHostName(url); // just the host name
+const signinPath = '/user#/signin';
 const signinURL = host + signinPath;
 
 function getHostName(url) {
     var match = url.match(/(ftp|http|https):\/\/(www[0-9]?\.)?(.[^/:]+)/i);
-    console.log(match);
-    console.log(match.length);
-
     if (match != null && match.length > 3 && typeof match[3] === 'string' && match[3].length > 0) {
       return match[1] + '://' + match[3];
     }
@@ -45,7 +38,7 @@ function validURL(s) {
     return regexp.test(s);
 }
 
-if (! (validURL(url) && validURL(targetURL)) ){
+if (! (validURL(url) && validURL(signinURL)) ){
   console.log("Puppeteer: URL '" + url + "'is not a valid URL for screenshotting");
   process.exit(1);
 }
@@ -55,8 +48,7 @@ if (! (validURL(url) && validURL(targetURL)) ){
     const page = await browser.newPage();
     await page.setViewport({width: imgWidth, height: imgHeight});
 
-    console.log(validURL(signinURL));
-    if (validURL(signinURL)){
+    if (validURL(signinURL) && signinURL != url){
       console.log('configuring UI for ' + signinURL);
       // First, go directly to the sign in page to login then the target pages
       // In the case that going to the singinURL takes you to an incorrect page, try going directly

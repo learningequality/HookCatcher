@@ -24,12 +24,11 @@ from .models import PR, Commit, Diff, Image, Profile, State
 LOGGER = logging.getLogger(__name__)
 
 
-def test_websocket(request):
-    msg = str(request.GET['val'])
+def build_status_ws(request, message):
     Group("ws").send({
-        "text": msg,
+        "text": str(message),
     })
-
+    print message
     return HttpResponse(200)
 
 
@@ -403,8 +402,6 @@ def view_pr(request, repo_name, pr_number):
     if latest_build == completed_build:
         latest_build = None
 
-    print completed_build
-
     if completed_build:
         diff_types = get_all_diff_types_of_build(completed_build)
         return render(request, 'projects/pull/view_pr.html', {
@@ -550,7 +547,7 @@ def webhook(request):
     try:
         payload = json.loads(request.body)
         act = payload['action']
-        LOGGER.info('Github action dectected: ', act)
+        LOGGER.info('Github action dectected: {0}'.format(act))
         if(act == "opened" or act == "reopened" or act == "closed" or act == "synchronized"):
             # History.log_pr_action(payload['pull_request']['number'], act, request.user)
             call_command('webhookHandler', payload['pull_request']['number'])

@@ -143,9 +143,9 @@ def generate_diffs(img_type, build_obj):
     # ELIF len(img_type) == 1:
     # There is a new or deleted State that is only defined in this PR,
     # but therefore, no comparison image exists so NO DIFF
-    else:  # len(img_type) > 2
+    elif len(img_type) > 2:
         msg = 'No Diff could be made. There were more than one state with the same name "{0}". Please fix this.'.format(  # noqa: E501
-              img_type[0].state.state_name)
+              img_type)
         LOGGER.error(msg)
         History.log_sys_error(build_obj.pr, msg)
         return ERROR_BUILD_STATUS_CODE  # return status code = 4 (error)
@@ -244,7 +244,7 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
     # be skeptical of perfectly running builds
     if build.status_code == IN_PROGRESS_BUILD_STATUS_CODE:
         for d in diff_jobs:
-            if not build.status_code == d.result:
+            if not build.status_code == ERROR_BUILD_STATUS_CODE and not build.status_code == d.result:  # noqa: E501
                 # d.result can either be 2 or 4
                 build.status_code = d.result
                 build.save()
@@ -257,19 +257,17 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
     else:
         LOGGER.info('An error occured during the screenshotting procedure!')
 
+    # convert status code to comprehensible message
+    status_map = ('UNINITIATED_BUILD',
+                  'IN_PROGRESS_BUILD',
+                  'COMPLETED_BUILD',
+                  'CANCELLED_BUILD',
+                  'ERROR_BUILD')
+    message = status_map[build.status_code]
+    # sending message to the client
     Group("ws").send({
-        "text": str(build.status_code),
+        "text": message,
     })
-
-
-# TODO WRAPPER NECESSARY?
-def redis_entrypoint_wrapper(base_states_list, head_states_list, build_id, old_build_id=None):
-    try:
-        redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id)
-    except:
-        # log log log
-        build = Build.objects.get(id=build_id)
-        build.status_code = ERROR_BUILD_STATUS_CODE
 
 
 # get all the right information to start diffing

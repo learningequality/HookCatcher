@@ -58,10 +58,12 @@ class State(models.Model):
 
     def get_full_url(self, host_url):
         if host_url:
-            if self.state_url[0] == '/':
-                return host_url + self.state_url
-            else:
-                return host_url + '/' + self.state_url
+            # want in the form: 'host.com' + '/state_url'
+            if host_url[-1:] == '/':
+                host_url = host_url[:-1]
+            if not self.state_url[0] == '/':
+                self.state_url = '/' + self.state_url[1:]
+            return host_url + self.state_url
         else:
             return self.state_url
 

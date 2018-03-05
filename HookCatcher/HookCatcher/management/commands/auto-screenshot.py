@@ -1,8 +1,12 @@
+import logging
+
 from django.core.management.base import BaseCommand, CommandError
 from HookCatcher.management.commands.functions.add_pr_info import add_pr_info
 from HookCatcher.management.commands.functions.diffs_from_pr import \
-    diffs_from_pr
+  diffs_from_pr
 from HookCatcher.models import PR, Build, Commit
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -18,14 +22,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # ASSUME: metadata of PR, commit, build, state has already been stored in databse by webhook
         pr_number = options['pr_number']
-        new_base = options['base_commit']
-        new_head = options['head_commit']
+        new_base = Commit.objects.get(git_hash=options['base_commit'])
+        new_head = Commit.objects.get(git_hash=options['head_commit'])
 
         try:
             build = Build.objects.get(pr=PR.objects.get(git_pr_number=pr_number),
-                                      git_target_commit=Commit.objects.get(git_hash=new_base),
-                                      git_source_commit=Commit.objects.get(git_hash=new_head))
-        except PR.DoesNotExist, Commit.DoesNotExist:
+                                      git_target_commit=new_base,
+                                      git_source_commit=new_head)
+        except Exception as e:
+            LOGGER.error(e)
             build = add_pr_info(pr_number)
 
         '''
@@ -49,6 +54,7 @@ class Command(BaseCommand):
             We have an idea of what the issue was with the last build
         '''
 
+        LOGGER.info("Initiated process for PR#{0}".format(pr_number))
         if build.status_code == 1:
             raise CommandError('This build is currently already in process')
 
@@ -66,7 +72,6 @@ class Command(BaseCommand):
             for base_state in base_states_list:
                 base_state.host_url = options['base_host']
                 base_state.full_url = base_state.get_full_url(options['base_host'])
-
                 base_state.save()
 
             # update the host domain of head branch

@@ -300,10 +300,18 @@
 
     // when server writes to client
     socket.onmessage = function(e) {
-      console.log(e.data)
-      if(parseInt(e.data) < 5){
-        window.location.reload(true);
+      console.log('incoming websocket');
+      var status_map = ['UNINITIATED_BUILD',
+                        'IN_PROGRESS_BUILD',
+                        'COMPLETED_BUILD',
+                        'CANCELLED_BUILD',
+                        'ERROR_BUILD'];
+      for (i=0; i < status_map.length; i++){
+        if(e.data = status_map[i]){
+          window.location.reload(true);
+        }
       }
+
     }
     if (socket.readyState == WebSocket.OPEN) socket.onopen();
 
