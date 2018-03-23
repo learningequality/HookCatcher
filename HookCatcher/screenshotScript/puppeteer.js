@@ -20,7 +20,7 @@ const imgHeight = argv.imgHeight || 600;
 
 //extract host for Sign In URL
 const host = getHostName(url); // just the host name
-const signinPath = '/user#/signin';
+const signinPath = '/user/#/signin';
 const signinURL = host + signinPath;
 
 function getHostName(url) {

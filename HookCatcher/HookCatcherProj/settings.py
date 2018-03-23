@@ -228,9 +228,11 @@ RQ_QUEUES = {
     },
 }
 
-REDIS_URL = "redis://{1}:{2}/0".format(REDIS_PASSWORD,
-                                       REDIS_HOST,
-                                       REDIS_PORT)
+REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    REDIS_URL = "redis://{1}:{2}/0".format(REDIS_PASSWORD,
+                                           REDIS_HOST,
+                                           REDIS_PORT)
 # Django Channels
 CHANNEL_LAYERS = {
     "default": {
