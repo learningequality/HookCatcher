@@ -155,7 +155,7 @@ def add_pr_info(prnumber_payload):
         build_object = Build.objects.get(pr=pr_object,
                                          git_target_commit=baseCommitObj,
                                          git_source_commit=headCommitObj)
-        LOGGER.error('Using exisiting metadata for Pull Request #{0}'.format(specificPR['number']))
+        LOGGER.info('Using exisiting metadata for Pull Request #{0}'.format(specificPR['number']))
     except Build.DoesNotExist:
         # Single Source of Truth of which build is newest-> time PR was changed from Github
         # github has a time listed for when this commit was updated to trigger this event
@@ -166,7 +166,7 @@ def add_pr_info(prnumber_payload):
                              date_time=last_updated,
                              git_target_commit=baseCommitObj,
                              git_source_commit=headCommitObj)
-        LOGGER.error('Saving Github metadata for Pull Request #{0}'.format(specificPR['number']))
+        LOGGER.info('Saving Github metadata for Pull Request #{0}'.format(specificPR['number']))
 
     ERROR_BUILD_STATUS_CODE = 4  # to show the build has some issues with it
     # Search Git for the 'states' folders and if they exist, save those states to database

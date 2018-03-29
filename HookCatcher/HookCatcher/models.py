@@ -286,4 +286,4 @@ class Diff(models.Model):
             # for the case when the image is not done loading yet
             return 'Diff is waiting on Images to Process...'
         else:
-            return '%d %s' % (self.id, self.diff_img_file.name)
+            return self.diff_img_file.name

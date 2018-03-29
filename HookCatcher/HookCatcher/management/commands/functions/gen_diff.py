@@ -51,10 +51,13 @@ def imagemagick(img1_path, img2_path, diff_name="", diff_obj=None):
         # NOTE: will raise Exception ONLY when there is a percent diff > 0 and successfully ran
         except sh.ErrorReturnCode_1, e:
             diffOutput = e.stderr
-
             # returns pixels and a % in () we only want the % ex: 25662.8 (0.39159)
             idxPercent = diffOutput.index('(') + 1
             diff_percent = diffOutput[idxPercent:len(diffOutput) - 1]
+
+        except sh.ErrorReturnCode_2, e:
+            LOGGER.error(e.stderr)
+
         finally:
 
             if diff_obj and not diff_name == '':

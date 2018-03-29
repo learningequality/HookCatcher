@@ -9,10 +9,10 @@ import logging
 import os
 import platform
 import tempfile
+
 import requests
 import sh
-
-from django.conf import settings  # database dir
+from django.conf import settings  # retrieve BASE_DIR
 from HookCatcher.models import Image
 
 # Logger variable to record such things
@@ -135,10 +135,10 @@ def chrome(state_obj, config):
     if is_new_img or not img_obj.image_exists():
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
             try:
-                sh.node('screenshotScript/puppeteer.js',  # where the capture.js script is
+                sh.node(os.path.join(settings.BASE_DIR, 'screenshotScript/puppeteer.js'),
                         '--url={0}'.format(state_obj.full_url),                # url for screenshot
-                        '--imgName={0}'.format(temp_img.name),                  # img name
-                        '--imgWidth={0}'.format(WIDTH),                          # width
+                        '--imgName={0}'.format(temp_img.name),                 # img name
+                        '--imgWidth={0}'.format(WIDTH),                        # width
                         '--imgHeight={0}'.format(HEIGHT))                      # height
                 # img_obj.img_file defaults to None on a new create
                 img_obj.img_file.save(real_img_name, temp_img, save=True)
@@ -148,7 +148,7 @@ def chrome(state_obj, config):
             # if there is some issue with screenshotting then say so
             # but still create the image object
             except sh.ErrorReturnCode_1, e:
-                error_msg = e.stdout
+                error_msg = e.stderr
                 LOGGER.error(error_msg)
             return
     # if this exact image is in the database and in the file system, just return the image obj
@@ -229,15 +229,23 @@ created first before to name the image of the screenshot in screenshot tool
 
 
 def add_screenshots(state_obj):
-    config_path = settings.SCREENSHOT_CONFIG
+    print "Entered the function: "
+    config_path = os.path.join(settings.BASE_DIR, settings.SCREENSHOT_CONFIG)
+    print(config_path + str(os.path.exists(config_path)))
     img_list = []
     if(os.path.exists(config_path) is True):
+        print "config file exists"
         with open(config_path, 'r') as c:
             config_file = json.loads(c.read())
             LOGGER.debug('STATE: {0}'.format(state_obj))
+            print('STATE obj is preserved: {0}'.format(state_obj))
             for config in config_file:
                 image_obj = gen_screenshot(state_obj, config['id'], config['config'])
-
+                print('return of gen screens: {0}'.format(image_obj))
                 if image_obj:
                     img_list.append(image_obj)
+            print('return of image list: {0}'.format(img_list))
             return img_list
+        print('errored before an image was created')
+    else:
+        LOGGER.critical('MISSING CONFIG FILE: {0} was not found!'.format(config_path))

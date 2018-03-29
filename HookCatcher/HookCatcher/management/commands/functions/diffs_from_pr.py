@@ -13,8 +13,9 @@ import time
 from collections import defaultdict
 
 import django_rq
-from add_screenshots import add_screenshots
 from channels import Group
+from HookCatcher.management.commands.functions.add_screenshots import \
+  add_screenshots
 from HookCatcher.management.commands.functions.gen_diff import (gen_diff,
                                                                 imagemagick)
 from HookCatcher.models import Build, Diff, History

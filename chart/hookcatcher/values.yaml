@@ -6,7 +6,7 @@ image:
   registry: docker.io
   org: learningequality
   name: health-inspector
-  tag: 2018-03-24
+  tag: 2018-03-26
   pullPolicy: IfNotPresent
 service:
   name: python
