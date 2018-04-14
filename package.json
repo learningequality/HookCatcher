@@ -1,4 +1,13 @@
 {
+  "name": "health-inspector",
+  "version": "1.0.0",
+  "description": "Automated screenshoting CI server",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mingdai/hookcatcher.git"
+  },
+  "author": "Ming Dai",
+  "license": "MIT",
   "dependencies": {
     "chrome-launcher": "^0.4.0",
     "chrome-remote-interface": "^0.24.5",

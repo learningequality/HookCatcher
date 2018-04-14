@@ -16,17 +16,6 @@
             <div class="menuTitle">
                 <h3>{{gitRepo}}</h3>
             </div>
-
-            <div class="menuDetail">
-
-                <button class="menuButtons">
-                    Sort by Diff%
-                </button>
-
-                <button class="menuButtons">
-                    List View
-                </button>
-            </div>
         </div>
         <div class="listContainer">
             <h2> {{ prList|length }} Total Pull Request{{ prList|pluralize }} </h2>
@@ -38,7 +27,15 @@
                         {{pr.git_repo}} PR #{{pr.git_pr_number}}</a></h4>
                         {{pr.git_title}}
                     </td>
-
+                    <td>
+                      {% if pr.build.status_code == 0 %}
+                        Ready to Generate Diffs!
+                      {% elif pr.build.status_code == 1 %}
+                        Generating Diffs ...
+                      {% else %}
+                        Completed Diffs!
+                      {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </table>

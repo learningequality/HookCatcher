@@ -38,15 +38,17 @@ spec:
               value: "{{ .Release.Name }}-redis"
             - name: REDIS_URL
               value: redis://{{ .Release.Name }}-redis:{{ .Values.redisservice.port }}
-          livenessProbe:
-            httpGet:
-              path: /
-              port: {{ .Values.service.internalPort }}
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.s3.AWS_ACCESS_KEY_ID }}"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.s3.AWS_SECRET_ACCESS_KEY }}"
+            - name: AWS_STORAGE_BUCKET_NAME
+              value: "{{ .Values.s3.AWS_STORAGE_BUCKET_NAME }}"
+            - name: AWS_S3_ENDPOINT_URL
+              value: "{{ .Values.s3.AWS_S3_ENDPOINT_URL }}"
           readinessProbe:
             httpGet:
               path: /
               port: {{ .Values.service.internalPort }}
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 120
+            periodSeconds: 120

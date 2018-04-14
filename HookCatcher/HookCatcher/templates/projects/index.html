@@ -1,7 +1,7 @@
 <html>
     <body>
         {% if prList %}
-          Following Git Repos:
+          The following Git Repositories are avaliable:
 
           {% for pr in prList %}
             <a href="{% url 'listPR' pr.git_repo|urlencode:"" %}">

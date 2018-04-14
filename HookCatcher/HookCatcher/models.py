@@ -1,13 +1,10 @@
 from __future__ import unicode_literals
 
-import os
 import uuid
 
-import requests
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator  # IntegerField Range
-from django.core.validators import MinValueValidator, URLValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q  # filter Build for status_code OR status_code
 from django.utils.encoding import python_2_unicode_compatible
@@ -227,41 +224,20 @@ class Image(models.Model):
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 
-    # Help check if the image is currently loading or not. Return True if done loaded
-    def image_rendered(self):
-        # callback images have no file name when rendering
-        return not (self.img_file == None or self.img_file.name == '')  # noqa: E711
-
     # Returns the full path of the image_file or the url depending on where it stored
-    def get_image_location(self):
-        validator = URLValidator()
+    def get_location(self):
         try:
-            validator(self.img_file.name)
-            return self.img_file.name
-        except ValidationError:  # is not a url
+            return self.img_file.url
+        except NotImplementedError:
+            pass
+        try:
             return self.img_file.path
-
-    # Validates if an image file exists whether as a url or a local image
-    def image_exists(self):
-        # If there is even a name to validate
-        if self.image_rendered():
-            # check if the file name is url or nah and see if that url is real
-            validator = URLValidator()
-            try:
-                validator(self.img_file.name)
-                return requests.get(self.img_file.name).status_code == 200
-            except ValidationError:
-                return os.path.exists(self.img_file.path)
-        else:
-            return False
+        except NotImplementedError:
+            pass
+        return None
 
     def __str__(self):
-        # if the img_file doesn't exist and therefore has no file name, print so
-        if not self.image_rendered():
-            # for the case when the image is not done loading yet
-            return 'Image File is Currently Processing...'
-        else:
-            return self.img_file.name
+        return self.img_file.name
 
 
 @python_2_unicode_compatible
@@ -276,14 +252,5 @@ class Diff(models.Model):
     diff_percent = models.DecimalField(max_digits=6, decimal_places=5, default=0)
     is_approved = models.BooleanField(default=False)
 
-    # Help check if the image is currently loading or not. Return True if rendered
-    def diff_image_rendered(self):
-        # callback images have no file name when rendering
-        return not self.diff_img_file == None and not self.diff_img_file.name == ''  # noqa: E711
-
     def __str__(self):
-        if not self.diff_image_rendered():
-            # for the case when the image is not done loading yet
-            return 'Diff is waiting on Images to Process...'
-        else:
-            return self.diff_img_file.name
+        return self.diff_img_file.name

@@ -2,7 +2,7 @@ flake8
 pre-commit
 appdirs==1.4.0
 asgi-redis==1.4.3
-channels==1.1.8
+channels==1.1.6
 Django==1.10.5
 django-rq==0.9.6
 Pillow==4.2.1
@@ -13,3 +13,5 @@ sh==1.12.9
 six==1.11.0
 pyOpenSSL==17.5.0
 service-identity==17.0.0
+django-storages==1.6.6
+boto3==1.7.2

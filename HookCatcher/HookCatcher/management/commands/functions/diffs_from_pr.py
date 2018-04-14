@@ -66,14 +66,14 @@ def transfer_old_build_data_to_new_build(img_pairs_dict, old_build):
                 new_img_obj = img_type[img_base_head][1]
 
                 # check if there are any loading images preventing imagemagick call success
-                if old_img_obj.image_rendered() and new_img_obj.image_rendered():
-                    old_img_path = old_img_obj.get_image_location()
-                    new_img_path = new_img_obj.get_image_location()
+                if old_img_obj.img_file and new_img_obj.img_file:
+                    old_img_path = old_img_obj.get_location()
+                    new_img_path = new_img_obj.get_location()
 
                     # Delete a redundant image same image saved in different locations
                     # make sure not to delete yourself if the two images are the same
                     if old_img_path != new_img_path:
-                        imagemagick_result = imagemagick(old_img_path, new_img_path)
+                        imagemagick_result = imagemagick(old_img_obj, new_img_obj)
                         if imagemagick_result == 0:
                             # delete the no longer linked new image
                             LOGGER.info('Deleting Redundant Image: {0} since it is equal to: {1}'.format(  # noqa: E501
@@ -119,28 +119,14 @@ def generate_diffs(img_type, build_obj):
             # generate a new diff cuz for some reason there is no old diff object..
             # doesn't try to change old build to have a diff object
             elif existing_diff.count() < 1:
-                # USED when screenshot script uses callback to see if done
-                if (not img_type['BASE'][0].image_rendered() or
-                   not img_type['HEAD'][0].image_rendered()):
-                    temp_diff = Diff(target_img=img_type['BASE'][0],
-                                     source_img=img_type['HEAD'][0])
-                    temp_diff.save()
-                else:
-                    gen_diff(img_type['BASE'][0], img_type['HEAD'][0])
+                gen_diff(img_type['BASE'][0], img_type['HEAD'][0])
 
             else:  # more than 1 exisiting diff returned...
                 msg = 'There is more than 1 Diff found for a pair of images: {0}'.format(existing_diff)  # noqa: E501
                 History.log_sys_error(build_obj.pr, msg)
         # if there is only 1 image for base/head aka Let's create a new diff
         elif len(img_type['BASE']) == 1 and len(img_type['HEAD']) == 1:
-            # used when screenshot script uses callback to see if still rendering
-            if (not img_type['BASE'][0].image_rendered() or
-               not img_type['HEAD'][0].image_rendered()):
-                temp_diff = Diff(target_img=img_type['BASE'][0],
-                                 source_img=img_type['HEAD'][0])
-                temp_diff.save()
-            else:
-                gen_diff(img_type['BASE'][0], img_type['HEAD'][0])
+            gen_diff(img_type['BASE'][0], img_type['HEAD'][0])
     # ELIF len(img_type) == 1:
     # There is a new or deleted State that is only defined in this PR,
     # but therefore, no comparison image exists so NO DIFF

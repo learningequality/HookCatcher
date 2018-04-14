@@ -66,7 +66,7 @@ def browserstack(state_obj, config):
         LOGGER.error('There is more than 1 copy of the same image in the database. Image info: {0}'.format(real_img_name))  # noqa: E501
         return
 
-    if is_new_img or not img_obj.image_exists():
+    if is_new_img:
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -132,7 +132,7 @@ def chrome(state_obj, config):
         return
 
     # generate new image if this image file doesn't exist, even if object does
-    if is_new_img or not img_obj.image_exists():
+    if is_new_img:
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
             try:
                 sh.node(os.path.join(settings.BASE_DIR, 'screenshotScript/puppeteer.js'),
@@ -144,7 +144,12 @@ def chrome(state_obj, config):
                 img_obj.img_file.save(real_img_name, temp_img, save=True)
                 LOGGER.debug('Generated image named: {0}'.format(os.path.join(settings.MEDIA_ROOT,
                                                                               img_obj.img_file.name)))  # noqa: E501
-                return img_obj
+                if img_obj.img_file:
+                    return img_obj
+                else:
+                    # don't want an object with No image file to be saved
+                    img_obj.delete()
+                    return
             # if there is some issue with screenshotting then say so
             # but still create the image object
             except sh.ErrorReturnCode_1, e:
@@ -179,7 +184,7 @@ def phantom(state_obj, config):
         return
 
     # generate new image if this image file doesn't exist, even if object does
-    if is_new_img or not img_obj.image_exists():
+    if is_new_img:
         with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
             try:
                 sh.phantomjs('screenshotScript/capture.js',  # where the capture.js script is
@@ -191,9 +196,13 @@ def phantom(state_obj, config):
                 img_obj.img_file.save(real_img_name, temp_img, save=True)
                 LOGGER.debug('Generated image named: {0}'.format(os.path.join(settings.MEDIA_ROOT,
                                                                               img_obj.img_file.name)))  # noqa: E501
-                return img_obj
-                # if there is some issue with screenshotting then say so
-            # but still create the image object
+                if img_obj.img_file:
+                    return img_obj
+                else:
+                    # don't want an object with No image file to be saved
+                    img_obj.delete()
+                    return
+            # if there is some issue with screenshotting then say so
             except sh.ErrorReturnCode_1, e:
                 error_msg = e.stdout
                 LOGGER.error(error_msg)
@@ -229,23 +238,15 @@ created first before to name the image of the screenshot in screenshot tool
 
 
 def add_screenshots(state_obj):
-    print "Entered the function: "
     config_path = os.path.join(settings.BASE_DIR, settings.SCREENSHOT_CONFIG)
-    print(config_path + str(os.path.exists(config_path)))
     img_list = []
     if(os.path.exists(config_path) is True):
-        print "config file exists"
         with open(config_path, 'r') as c:
             config_file = json.loads(c.read())
-            LOGGER.debug('STATE: {0}'.format(state_obj))
-            print('STATE obj is preserved: {0}'.format(state_obj))
             for config in config_file:
                 image_obj = gen_screenshot(state_obj, config['id'], config['config'])
-                print('return of gen screens: {0}'.format(image_obj))
                 if image_obj:
                     img_list.append(image_obj)
-            print('return of image list: {0}'.format(img_list))
             return img_list
-        print('errored before an image was created')
     else:
         LOGGER.critical('MISSING CONFIG FILE: {0} was not found!'.format(config_path))

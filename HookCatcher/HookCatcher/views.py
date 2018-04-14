@@ -64,7 +64,7 @@ def pr_representation(pr_obj):
 
 
 def image_representation(image_obj):
-    img_name = image_obj.get_image_location()
+    img_name = image_obj.get_location()
     return {
         'name': img_name,
         'browser_type': image_obj.browser_type,
@@ -190,19 +190,19 @@ def git_list_repositories(git_access_token):
 
 
 def projects(request):
-    if request.user.is_authenticated:
-        unique_repos = PR.objects.order_by().values('git_repo').distinct()
-        # unique_repos = git_list_repositories(request.user.profile.git_access_token)
-        return render(request, 'projects/index.html', {
-            'prList': unique_repos,
-        })
-    else:
-        return redirect('login')
+    unique_repos = PR.objects.order_by().values('git_repo').distinct()
+    # unique_repos = git_list_repositories(request.user.profile.git_access_token)
+    return render(request, 'projects/index.html', {
+        'prList': unique_repos,
+    })
 
 
 def listPR(request, repo_name):
     repo_name = urllib.unquote(repo_name)
     pr_list = PR.objects.filter(git_repo=repo_name).order_by('-git_pr_number')
+
+    for pr in pr_list:
+        pr.build = pr.get_latest_build()
 
     return render(request, 'compare/index.html', {
         'prList': pr_list,
@@ -395,21 +395,13 @@ def view_pr(request, repo_name, pr_number):
     latest_build = pr_obj.get_latest_build()
     completed_build = pr_obj.get_last_executed_build()
 
-    if completed_build and completed_build.status_code == 1:
-        completed_build = None
-
-    # if they are the same then only show completed_build
-    if latest_build == completed_build:
-        latest_build = None
-
     if completed_build:
         diff_types = get_all_diff_types_of_build(completed_build)
         return render(request, 'projects/pull/view_pr.html', {
                     'user': request.user.username,
                     'repo': repo_name,
                     'pr': pr_obj,
-                    'new_build': latest_build,
-                    'old_build': completed_build,
+                    'build': latest_build,
                     'history_list': pr_obj.history_set.all(),
 
                     'changed_diffs': diff_types['changed']['all'],
@@ -438,8 +430,7 @@ def view_pr(request, repo_name, pr_number):
                     'user': request.user.username,
                     'repo': repo_name,
                     'pr': pr_obj,
-                    'new_build': latest_build,
-                    'old_build': None,
+                    'build': latest_build,
                     'history_list': pr_obj.history_set.all(),
                 })
     # else:
@@ -557,6 +548,7 @@ def webhook(request):
         return HttpResponse(status=500)
 
 
+# THIS ENDPOINT IS DEPRECATED
 @csrf_exempt
 @require_POST
 def browserstack_callback(request, img_id):
