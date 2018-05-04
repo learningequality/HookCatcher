@@ -69,13 +69,13 @@ if (! (validURL(url) && validURL(signinURL)) ){
       // the page actually loads but just never finishes the idle
       // Just ignore this error because it's expected
       console.log('actual page ' + url);
-      await page.goto(url, {timeout: 3000});
+      await page.goto(url, {timeout: 5000});
       //wait 2 second if still same url wait till navigation over
       console.log(page.url());
       if (page.url() == url){
-        await page.waitForNavigation({timeout: 3000, waitUntil: 'networkidle2'});
+        await page.waitForNavigation({timeout: 5000, waitUntil: 'networkidle2'});
       }else{
-        await page.waitForNavigation({timeout: 3000, waitUntil: 'networkidle2'});
+        await page.waitForNavigation({timeout: 5000, waitUntil: 'networkidle2'});
         const calc_height = await page.evaluate(() => {
           return Math.max(document.body.scrollHeight,
                           document.body.offsetHeight,

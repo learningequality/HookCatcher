@@ -53,7 +53,7 @@
 
         {% else %}
         <div id="build_executed" class="pr_approve_block">
-          <div class="approve_header">
+            <!--<div class="approve_header">
             <div id="approve_status">
               {% if num_total_unapproved_states == 0%}
                 &#10004; All changes approved
@@ -68,10 +68,10 @@
                   <a id="reset_or_approve" href="#" onclick="javascript:approve_or_reset_all('approve')"/>Approve All</a>
               {% endif %}
             </div>
-          </div>
+          </div>-->
           <div class="pr_approve_subblock">
             <div class="approve_text">
-              <p id="unapproved_changes_count"> {{num_total_unapproved_states}} Unapproved visual change{{num_total_unapproved_states|pluralize}} </p>
+              <!-- <p id="unapproved_changes_count"> {{num_total_unapproved_states}} Unapproved visual change{{num_total_unapproved_states|pluralize}} </p> -->
               <p> {{num_total_states}} State{{num_total_states|pluralize}} Total</p>
             </div>
             <div class="history_block">
@@ -83,7 +83,7 @@
               </div>
             </div>
             <a href="https://github.com/{{repo}}/pull/{{pr.git_pr_number}}">PR on Github</a><br>
-            <a href=".">Demo Server</a>
+            <!-- <a href=".">Demo Server</a> -->
           </div>
         </div> <!-- pr_approve_block -->
         {% endif %}
@@ -103,13 +103,13 @@
           {% for diff in changed_diffs %}
           <div class="diff_content">
             <div class="left_half_diff">
-              <form action="" method="post" id="approve_form">
+              <!-- <form action="" method="post" id="approve_form">
                 {% if diff.is_approved %}
                   <input type="checkbox" class="chkbox_approve_diff" name="approve_diff" value="{{diff.id}}" checked>Approve
                 {% else %}
                   <input type="checkbox" class="chkbox_approve_diff" name="approve_diff" value="{{diff.id}}">Approve
                 {% endif %}
-              </form>
+              </form> -->
               <div class="diff_description">
                 <p>State Name: <span>{{diff.target_img.state.state_name}}</span></p>
                 {% if diff.target_img.state.full_url ==  diff.source_img.state.full_url%}
@@ -162,13 +162,13 @@
           {% for image in new_diffs %}
           <div class="diff_content">
             <div class="left_half_diff">
-              <form action="" method="post" id="approve_form">
+              <!-- <form action="" method="post" id="approve_form">
                 {% if image.is_approved %}
                   <input type="checkbox" class="chkbox_approve_img" name="approve_img" value="{{image.id}}" checked>Approve
                 {% else %}
                   <input type="checkbox" class="chkbox_approve_img" name="approve_img" value="{{image.id}}">Approve
                 {% endif %}
-              </form>
+              </form> -->
               <div class="diff_description">
                 <p>State Name: <span>{{image.state.state_name}}</span></p>
                 <p>URL: <span>{{image.state.full_url}}</span></p>
@@ -206,13 +206,13 @@
           {% for image in deleted_diffs %}
           <div class="diff_content">
             <div class="left_half_diff">
-              <form action="" method="post" id="approve_form">
+              <!-- <form action="" method="post" id="approve_form">
                 {% if image.is_approved %}
                   <input type="checkbox" class="chkbox_approve_img" name="approve_img" value="{{image.id}}" checked>Approve
                 {% else %}
                   <input type="checkbox" class="chkbox_approve_img" name="approve_img" value="{{image.id}}">Approve
                 {% endif %}
-              </form>
+              </form> -->
               <div class="diff_description">
                 <p>State Name: <span>{{image.state.state_name}}</span></p>
                 <p>URL: <span>{{image.state.full_url}}</span></p>
@@ -250,13 +250,13 @@
           {% for diff in unchanged_diffs %}
           <div class="diff_content">
             <div class="left_half_diff">
-              <form action="" method="post" id="approve_form">
+              <!-- <form action="" method="post" id="approve_form">
                 {% if diff.is_approved %}
                   <input type="checkbox" class="chkbox_approve_diff" name="approve_diff" value="{{diff.id}}" checked>Approve
                 {% else %}
                   <input type="checkbox" class="chkbox_approve_diff" name="approve_diff" value="{{diff.id}}">Approve
                 {% endif %}
-              </form>
+              </form> -->
               <div class="diff_description">
                 <p>State Name: <span>{{diff.target_img.state.state_name}}</span></p>
                 {% if diff.target_img.state.full_url ==  diff.source_img.state.full_url %}

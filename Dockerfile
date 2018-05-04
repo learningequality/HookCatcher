@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -yq libgconf-2-4
 RUN apt-get -y install curl
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 RUN apt-get update
-RUN apt-get -y install nodejs python python-pip imagemagick redis-server git build-essential make vim
+RUN apt-get -y install nodejs python python-pip imagemagick redis-server git build-essential make
 
 
 # Note: this installs the necessary libs to make the bundled version of Chromium that Puppeteer

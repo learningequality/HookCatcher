@@ -59,7 +59,7 @@ class State(models.Model):
             if host_url[-1:] == '/':
                 host_url = host_url[:-1]
             if not self.state_url[0] == '/':
-                self.state_url = '/' + self.state_url[1:]
+                self.state_url = '/' + self.state_url
             return host_url + self.state_url
         else:
             return self.state_url
@@ -134,6 +134,10 @@ class Build(models.Model):
         new_states = []  # list of images that pertain to newly tracked states for this PR Build
         for image in self.git_source_commit.get_images():
             is_new_state = True
+    # a new commit old pr creates a new iamge object for all the new screenshots
+    # no new diffs are bieng made for new images
+    # the new image objects have new files attached to them
+
             if len(image.source_img_in_Diff.all()) > 0:
                 # find a diff with matching source and target git_commits in the PR Build
                 for diff in image.source_img_in_Diff.all():
