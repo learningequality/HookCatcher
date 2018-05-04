@@ -284,7 +284,7 @@ $ python manage.py simpleGetDiff <Image Name 1> <Image Name 2> <Resulting Diff N
 
 ## Overview of Application Infrastructure
 
-![Auto-Screenshot Application Flow](https://storage.cloud.google.com/health-inspector/Auto-screenshot%20app%20flow.png?authuser=2&_ga=2.246296135.-2100922619.1518723341&_gac=1.183351892.1522360952.Cj0KCQjwnfLVBRCxARIsAPvl82ESPezlpbr0x8hTQa4mN2aW5AhpxILJQJdnpjt2F_ALMK3UCXv-1-IaAiqgEALw_wcB)
+![Auto-Screenshot Application Flow](./App_Flow_Diagram.png)
 
 1. The application parses a Github API payload to store metadata about the recently submitted pull request.
 NOTE: Make sure to have a folder in the target repository that defines the states you wish to capture.
