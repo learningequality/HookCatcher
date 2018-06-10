@@ -263,14 +263,16 @@ tag: <IMAGE_TAG>
 
 3. Open how ever many more windows and start a Redis Queue worker on each `$  python manage.py rqworker default`
 
-4. To start the server, run
+4. Run `$ python manage.py migrate` to set up the database. (This only needs to be run the first time)
+
+5. To start the server, run
 `$ python manage.py runserver (port)`
 NOTE: port defaults to 8000
 
 To view site enter the following website url into your browser:
 http://127.0.0.1:8000/
 
-###### NOTE: make sure you don't have `DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'` if you have been publishing to production recently
+**NOTE:** make sure you don't have `DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'` if you have been publishing to production recently
 
 
 ## Command Line Tools
