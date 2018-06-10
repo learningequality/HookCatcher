@@ -6,8 +6,8 @@ and generating new private key on the Git App will get rid of this issue
 
 
 '''
-
 import json
+import logging
 from datetime import datetime
 
 import jwt
@@ -15,6 +15,8 @@ import requests
 from django.conf import settings  # database dir
 from django.core.management.base import BaseCommand
 from github import Github
+
+LOGGER = logging.getLogger(__name__)
 
 
 def git_auth_header(pemfile):
@@ -107,4 +109,4 @@ class Command(BaseCommand):
                         description=status_msg_map[options['status']],
                         context='health-inspector')
 
-        print 'Commit status: {0} added'.format(options['status'])
+        LOGGER.info('Commit status: {0} added'.format(options['status']))

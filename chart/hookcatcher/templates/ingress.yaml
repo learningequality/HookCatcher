@@ -5,6 +5,9 @@ metadata:
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 spec:
+  backend:
+    serviceName: {{ template "fullname" . }}
+    servicePort: {{ .Values.service.externalPort }}
   rules:
   - host: {{ .Release.Name }}.{{ .Values.basedomain }}
     http:

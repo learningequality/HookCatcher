@@ -1,0 +1,50 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}-rqworker-deployment
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+spec:
+  replicas: {{ .Values.app.workerCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}-rqworker-deployment
+        tier: workers
+    spec:
+      containers:
+      # add the hash, to force helm to include upgrades to environment variables
+        - name: {{ .Chart.Name }}-{{ print $.Template.BasePath "/deployment.yaml" . | sha256sum | trunc 5 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.org }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+          - containerPort: {{ .Values.service.internalPort }}
+          command: ["make", "rqworkers"]
+          env:
+            - name: POSTGRES_PORT
+              value: "{{ .Values.postgresqlservice.port }}"
+            - name: POSTGRES_HOST
+              value: "{{ .Release.Name }}-postgresql"
+            - name: POSTGRES_USER
+              value: "{{ .Values.postgresql.postgresUser }}"
+            - name: POSTGRES_DB_NAME
+              value: "{{ .Values.postgresql.postgresDatabase }}"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Release.Name }}-postgresql"
+                  key: postgres-password
+            - name: REDIS_PORT
+              value: "{{ .Values.redisservice.port }}"
+            - name: REDIS_HOST
+              value: "{{ .Release.Name }}-redis"
+            - name: REDIS_URL
+              value: redis://{{ .Release.Name }}-redis:{{ .Values.redisservice.port }}
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.s3.AWS_ACCESS_KEY_ID }}"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.s3.AWS_SECRET_ACCESS_KEY }}"
+            - name: AWS_STORAGE_BUCKET_NAME
+              value: "{{ .Values.s3.AWS_STORAGE_BUCKET_NAME }}"
+            - name: AWS_S3_ENDPOINT_URL
+              value: "{{ .Values.s3.AWS_S3_ENDPOINT_URL }}"

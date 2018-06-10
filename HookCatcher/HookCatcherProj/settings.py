@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_rq',
-
+    'channels',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -115,6 +116,61 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media').replace('\\', '/')
 MEDIA_URL = '/media/'
 
 
+# Leverage object file storage in s3 bucket
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID') or 'mingdaidev'
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY') or 'mingdaidev'
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME') or 'ming'
+AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') or 'http://minio'
+
+# Using Loggers instead of print statements for console output!
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt': "%d/%b/%Y %H:%M:%S"
+        },
+    },
+    'handlers': {
+        'null': {
+            'level': 'DEBUG',
+            'class': 'logging.NullHandler',
+        },
+        'logfile': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR + "/logfile",
+            'maxBytes': 50000,
+            'backupCount': 2,
+            'formatter': 'standard',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'propagate': False,
+            'level': 'WARN',
+        },
+        'HookCatcher': {
+            'handlers': ['console', 'logfile'],
+            'level': 'DEBUG',
+        },
+    }
+}
+
 # --- GET ALL THE OTHER ENV VARIABLES ---
 # GIT_REPO = os.getenv('GIT_REPO')    # the Github Repository you are attempting to link to
 
@@ -165,6 +221,9 @@ DATABASES = {
     }
 }
 
+REDIS_HOST = os.getenv("REDIS_HOST") or "127.0.0.1"
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or ''
+
 # try to get the env variable for Redis port
 REDIS_PORT = os.getenv('REDIS_PORT')
 if not REDIS_PORT:
@@ -172,10 +231,26 @@ if not REDIS_PORT:
 
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
-        'PORT': REDIS_PORT,
+        'HOST': REDIS_HOST,
+        'PORT': int(REDIS_PORT),
         'DB': 0,
-        'PASSWORD': '',
+        'PASSWORD': REDIS_PASSWORD,
         'DEFAULT_TIMEOUT': 360,
+    },
+}
+
+REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    REDIS_URL = "redis://{1}:{2}/0".format(REDIS_PASSWORD,
+                                           REDIS_HOST,
+                                           REDIS_PORT)
+# Django Channels
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "asgi_redis.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_URL)],
+        },
+        "ROUTING": "HookCatcherProj.routing.channel_routing",
     },
 }

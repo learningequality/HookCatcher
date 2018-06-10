@@ -4,24 +4,32 @@
 replicaCount: 2
 image:
   registry: docker.io
-  org: library
-  name: python
-  tag: onbuild
+  org: learningequality
+  name: health-inspector
+  tag: 2018-03-26
   pullPolicy: IfNotPresent
 service:
   name: python
-  type: ClusterIP
+  type: NodePort
   externalPort: 80
   internalPort: 8080
 resources:
   limits:
     cpu: 100m
-    memory: 128Mi
+    memory: 128Mix
   requests:
     cpu: 100m
     memory: 128Mi
+
+# settings for app layer
+app:
+  # number of rqworkers
+  workerCount: 4
 
 # postgresql chart configuration
 postgresql:
   postgresUser: "garnish_prod_user"
   postgresDatabase: "garnish_prod_db"
+
+# basedomain
+basedomain: "learningequality.org"

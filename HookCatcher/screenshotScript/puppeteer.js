@@ -19,46 +19,82 @@ const imgWidth  = argv.imgWidth || 800;
 const imgHeight = argv.imgHeight || 600;
 
 //extract host for Sign In URL
-const urlParts = url.split('#');
-const targetURL = urlParts[0];
-
-const host = targetURL.substring(0, (targetURL.indexOf('.org/') + 5)); // just the host name
-const signinPath = 'user';
+const host = getHostName(url); // just the host name
+const signinPath = '/user/#/signin';
 const signinURL = host + signinPath;
 
-function validURL(value) {
-  return /^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:[/?#]\S*)?$/i.test(value);
+function getHostName(url) {
+    var match = url.match(/(ftp|http|https):\/\/(www[0-9]?\.)?(.[^/:]+)/i);
+    if (match != null && match.length > 3 && typeof match[3] === 'string' && match[3].length > 0) {
+      return match[1] + '://' + match[3];
+    }
+    else {
+        return null;
+    }
 }
 
-if (! (validURL(url) && validURL(signinURL) && validURL(targetURL)) ){
-  console.log("URL: '" + url + "'is not a valid URL for screenshotting");
+function validURL(s) {
+    var regexp = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
+    return regexp.test(s);
+}
+
+if (! (validURL(url) && validURL(signinURL)) ){
+  console.log("Puppeteer: URL '" + url + "'is not a valid URL for screenshotting");
   process.exit(1);
 }
 
 (async () => {
-  const browser = await puppeteer.launch({headless: true});
-  const page = await browser.newPage();
-  await page.setViewport({width: imgWidth, height: imgHeight});
+    const browser = await puppeteer.launch({headless: true});
+    const page = await browser.newPage();
+    await page.setViewport({width: imgWidth, height: imgHeight});
 
-  console.log('configuring UI for ' + signinURL);
-  // First, go directly to the sign in page to login then the target pages
-  // In the case that going to the singinURL takes you to an incorrect page, try going directly
-  try{
-    await page.goto(signinURL, {waitUntil: 'networkidle2'});
-    // interact with UI
-    await page.type('input[type=text]', 'devowner');
-    await page.type('input[type=password]', 'admin123');
-    await page.click('button[type=submit]', {waitUntil: 'networkidle2'});
+    if (validURL(signinURL) && signinURL != url){
+      console.log('configuring UI for ' + signinURL);
+      // First, go directly to the sign in page to login then the target pages
+      // In the case that going to the singinURL takes you to an incorrect page, try going directly
+      try{
+        await page.goto(signinURL, {waitUntil: 'networkidle2'});
+        // interact with UI
+        await page.type('input[type=text]', 'devowner');
+        await page.type('input[type=password]', 'admin123');
 
-    await page.waitForNavigation({waitUntil: 'networkidle2'});  // button redirects
-  }catch (e) {}
+        await page.click('button[type=submit]', {waitUntil: 'networkidle2'});
+        await page.waitForNavigation({waitUntil: 'networkidle2'});  // button redirects
+      }catch (e){
+      }
+    }
 
-  try{
-    // ERROR: returns Timeout error when attempting to GOTO url with '#' within the url
-    // Just ignore this error because it's expected
-    await page.goto(url, {timeout: 300, waitUntil: 'networkidle2'});
-  }catch (e){
-  }
+    try{
+      // ERROR: returns Timeout error when attempting to GOTO url with '#' within the url
+      // the page actually loads but just never finishes the idle
+      // Just ignore this error because it's expected
+      console.log('actual page ' + url);
+      await page.goto(url, {timeout: 5000});
+      //wait 2 second if still same url wait till navigation over
+      console.log(page.url());
+      if (page.url() == url){
+        await page.waitForNavigation({timeout: 5000, waitUntil: 'networkidle2'});
+      }else{
+        await page.waitForNavigation({timeout: 5000, waitUntil: 'networkidle2'});
+        const calc_height = await page.evaluate(() => {
+          return Math.max(document.body.scrollHeight,
+                          document.body.offsetHeight,
+                          document.documentElement.clientHeight,
+                          document.documentElement.scrollHeight,
+                          document.documentElement.offsetHeight);
+          });
+
+        //await page.setViewport({width: 600, height: calc_height});  Another way of calc height
+
+        console.log('Early exit: saving screenshot to: ' + imgName);
+        await page.screenshot({path: imgName, type: 'png', fullPage: true});
+        await page.close();
+        await browser.close();
+        process.exit(1);
+
+      }
+
+    }catch (e){}
 
   // Attempting to calculate the full height of the page
   const calc_height = await page.evaluate(() => {
@@ -67,7 +103,6 @@ if (! (validURL(url) && validURL(signinURL) && validURL(targetURL)) ){
                     document.documentElement.clientHeight,
                     document.documentElement.scrollHeight,
                     document.documentElement.offsetHeight);
-
   });
 
   //await page.setViewport({width: 600, height: calc_height});  Another way of calc height

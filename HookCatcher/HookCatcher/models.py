@@ -1,13 +1,10 @@
 from __future__ import unicode_literals
 
-import os
 import uuid
 
-import requests
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator  # IntegerField Range
-from django.core.validators import MinValueValidator, URLValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q  # filter Build for status_code OR status_code
 from django.utils.encoding import python_2_unicode_compatible
@@ -54,17 +51,18 @@ class State(models.Model):
     host_url = models.TextField(null=True, blank=True)
     login_username = models.CharField(max_length=200, null=True, blank=True)
     login_password = models.CharField(max_length=200, null=True, blank=True)
+    full_url = models.TextField(null=True, blank=True)
 
-    def get_full_url(self):
-        if self.host_url:
-            if self.state_url[0] != '/':
-                return self.host_url + self.state_url
-            else:
-                return os.path.join(self.host_url, self.state_url)
+    def get_full_url(self, host_url):
+        if host_url:
+            # want in the form: 'host.com' + '/state_url'
+            if host_url[-1:] == '/':
+                host_url = host_url[:-1]
+            if not self.state_url[0] == '/':
+                self.state_url = '/' + self.state_url
+            return host_url + self.state_url
         else:
             return self.state_url
-
-    full_url = property(get_full_url)
 
     def __str__(self):
         return '%s, %s:%s %s' % (self.state_name,
@@ -81,12 +79,12 @@ class PR(models.Model):
 
     # when a new commit is added to the PR but nothing done with that commit yet
     def get_latest_build(self):
-        all_builds = self.build_set.all().order_by('-date_time')
+        all_builds = self.build_set.all().order_by('-date_time', '-pr_version')
         return all_builds.first()
 
     # use this method thiso display the last processed build information of a PR
     def get_last_executed_build(self):
-        all_builds = self.build_set.all().filter(~Q(status_code=0)).order_by('-date_time')  # noqa: E501
+        all_builds = self.build_set.all().filter(~Q(status_code=0)).order_by('-date_time', '-pr_version')  # noqa: E501
         if len(all_builds) > 0:
             return all_builds.first()
         else:
@@ -136,6 +134,10 @@ class Build(models.Model):
         new_states = []  # list of images that pertain to newly tracked states for this PR Build
         for image in self.git_source_commit.get_images():
             is_new_state = True
+    # a new commit old pr creates a new iamge object for all the new screenshots
+    # no new diffs are bieng made for new images
+    # the new image objects have new files attached to them
+
             if len(image.source_img_in_Diff.all()) > 0:
                 # find a diff with matching source and target git_commits in the PR Build
                 for diff in image.source_img_in_Diff.all():
@@ -185,16 +187,15 @@ class History(models.Model):
 
     # record how many diffs were generated and how many still avaliable in history
     @classmethod
-    def log_initial_diffs(cls, pr_obj):
-        if len(pr_obj.get_diffs()) > 0:
+    def log_initial_diffs(cls, build_obj):
+        if len(build_obj.get_diffs()) > 0:
             approved_count = 0
-            for diff in pr_obj.get_diffs():
+            for diff in build_obj.get_diffs():
                 if diff.diff_percent == 0:
                     approved_count = approved_count + 1
             msg = '{0} Diffs were generated, of which {1} were automatically approved'.format(
-                  len(pr_obj.get_diffs()), approved_count)
-
-            cls(message=msg, pr=pr_obj).save()
+                  len(build_obj.get_diffs()), approved_count)
+            cls(message=msg, pr=build_obj.pr).save()
         return
 
     # record in history when a user manually approves of a diff (probably too granular)
@@ -208,8 +209,7 @@ class History(models.Model):
     # record in history any internal system errors
     @classmethod
     def log_sys_error(cls, pr_obj, error_message):
-        msg = 'INTERNAL SYSTEM ERROR: {0}'.format(error_message)
-        cls(message=msg, pr=pr_obj, is_error=True).save()
+        cls(message=error_message, pr=pr_obj, is_error=True).save()
         return
 
     def __str__(self):
@@ -228,41 +228,20 @@ class Image(models.Model):
     # many Images to one State (for multiple browsers)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 
-    # Help check if the image is currently loading or not. Return True if done loaded
-    def image_rendered(self):
-        # callback images have no file name when rendering
-        return not (self.img_file == None or self.img_file.name == '')  # noqa: E711
-
     # Returns the full path of the image_file or the url depending on where it stored
-    def get_image_location(self):
-        validator = URLValidator()
+    def get_location(self):
         try:
-            validator(self.img_file.name)
-            return self.img_file.name
-        except ValidationError:  # is not a url
+            return self.img_file.url
+        except NotImplementedError:
+            pass
+        try:
             return self.img_file.path
-
-    # Validates if an image file exists whether as a url or a local image
-    def image_exists(self):
-        # If there is even a name to validate
-        if self.image_rendered():
-            # check if the file name is url or nah and see if that url is real
-            validator = URLValidator()
-            try:
-                validator(self.img_file.name)
-                return requests.get(self.img_file.name).status_code == 200
-            except ValidationError:
-                return os.path.exists(self.img_file.path)
-        else:
-            return False
+        except NotImplementedError:
+            pass
+        return None
 
     def __str__(self):
-        # if the img_file doesn't exist and therefore has no file name, print so
-        if not self.image_rendered():
-            # for the case when the image is not done loading yet
-            return 'Image File is Currently Processing...'
-        else:
-            return self.img_file.name
+        return self.img_file.name
 
 
 @python_2_unicode_compatible
@@ -277,14 +256,5 @@ class Diff(models.Model):
     diff_percent = models.DecimalField(max_digits=6, decimal_places=5, default=0)
     is_approved = models.BooleanField(default=False)
 
-    # Help check if the image is currently loading or not. Return True if rendered
-    def diff_image_rendered(self):
-        # callback images have no file name when rendering
-        return not self.diff_img_file == None and not self.diff_img_file.name == ''  # noqa: E711
-
     def __str__(self):
-        if not self.diff_image_rendered():
-            # for the case when the image is not done loading yet
-            return 'Diff is waiting on Images to Process...'
-        else:
-            return '%d %s' % (self.id, self.diff_img_file.name)
+        return self.diff_img_file.name
