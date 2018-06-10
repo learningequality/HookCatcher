@@ -6,20 +6,30 @@ Generates perceptual diff of a git repository as you make pull requests.
 
 ### Manual Installation
 
-**System Requirements**<br />
+**System Requirements**
 
-Download and install the following:<br />
-[Python 2](https://www.python.org/downloads/) w/ pip installed<br />
-[Node](https://nodejs.org/en/) w/ yarn installed<br />
-[Redis](https://redis.io/)<br />
-[PostgreSQL](https://www.postgresql.org/)<br />
-  ```postgres
-  CREATE DATABASE garnish_db
-  CREATE USER garnish_user WITH LOGIN PASSWORD 'garnish'
-  ```
-[PhantomJS](http://phantomjs.org/)<br />
+Download and install the following:
 
-**Python and NodeJs Packages**<br />
+* [Python 2](https://www.python.org/downloads/) w/ pip installed
+* [Node](https://nodejs.org/en/) w/ yarn installed
+* [Redis](https://redis.io/)
+* [PostgreSQL](https://www.postgresql.org/)
+* [PhantomJS](http://phantomjs.org/)
+
+Create databases:
+
+Run `psql postgres` to open the [interactive terminal](https://www.postgresql.org/docs/9.2/static/app-psql.html). Then run these commands:
+
+```postgres
+CREATE DATABASE garnish_db;
+CREATE USER garnish_user WITH LOGIN PASSWORD 'garnish';
+```
+
+This will create a new database and user used by the app.
+
+
+**Python and NodeJs Packages**
+
 ```
 $ pip install -r requirements.txt
 $ yarn install
@@ -77,7 +87,7 @@ Specify the port that is running PostgreSQL (defaults to 5432):
 POSTGRES_PORT='POSTGRES_PORT_NUMBER'
 ```
 
-### Production:<br />
+### Production:
 
 ##### Download Kubernetes and Helm
 `$ brew install kubernetes-cli`
