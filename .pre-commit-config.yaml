@@ -10,5 +10,4 @@
   sha: d044ff27300a6dc8b1a56cd22552e3a810dc6f49
   hooks:
   - id: python-import-sorter
-    args:
-    - --silent-overwrite
+    args: ['--diff']

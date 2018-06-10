@@ -1,0 +1,185 @@
+    <html>
+        <head>
+            <meta charset="utf-8">
+            {% load static %}
+            <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/style.css' %}"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+
+        <body>
+            <div class="menu">
+                <div class="menuTitle">
+                    <h3>Base Repo: {{PR.git_target_commit.git_repo}}</h3>
+                </div>
+
+
+                <div class="menuDetail">
+
+                    <button class="menuButtons">
+                        Sort by Diff%
+                    </button>
+
+                    <div class="dropdown">
+                        <button onclick="toggleDropdown()" class="menuButtons btnDropdown">Change Resolutions</button>
+                        <div id="resDropdown" class="resDropdown">
+                            <a href="{% url 'singlePR' repo_name='MingDai/kolibr' pr_number=PR.git_pr_number %}">
+                                All
+                            </a>
+                            {% for res in res_dict_list %}
+                                <a href="{% url 'singlePR' repo_name='MingDai/kolibri' pr_number=PR.git_pr_number res_width=res.width res_height=res.height %}">
+                                    {{res.width}}x{{res.height}}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button class="menuButtons">
+                        List View
+                    </button>
+                </div>
+            </div>
+
+
+            <h1 class="contentHeader"><a href="{% url 'listPR' PR.git_target_commit.git_repo %}"> Pull Request #{{PR.git_pr_number}} </a></h1>
+
+            <div class="diffBody">
+            {% if diff_dict_list %}
+                {% for diff_dict in diff_dict_list %}
+                    <div class="diffContent">
+
+                        {% if diff_dict.diff_obj.diff_percent|floatformat != "0" %}
+                        <div class="diffHeader">
+                            <h2>{{diff_dict.state_name}} {{diff_dict.diff_obj.target_img.width}}x{{diff_dict.diff_obj.target_img.height}}</h2>
+                            <h2>Difference: {{diff_dict.diff_obj.diff_percent}}</h2>
+                        </div>
+                        <div class="diffContainer">
+                            <div class="diffHalf">
+                                <p> {{PR.git_target_commit.git_repo}} ({{PR.git_target_commit.git_branch}}) </p>
+                                {% if diff_dict.diff_obj.target_img.name %}
+                                    <img src="{{diff_dict.diff_obj.target_img.name}}">
+                                {% else %}
+                                    <div class="loading-spinner">
+                                        <div class="loading-rect1"></div>
+                                        <div class="loading-rect2"></div>
+                                        <div class="loading-rect3"></div>
+                                        <div class="loading-rect4"></div>
+                                        <div class="loading-rect5"></div>
+                                    </div>
+                                {% endif%}
+                            </div>
+                            <div class="diffHalf">
+                                <p> {{PR.git_source_commit.git_repo}} ({{PR.git_source_commit.git_branch}}) </p>
+
+                                {% if diff_dict.diff_obj.name %}
+                                    <img src="{{diff_dict.diff_obj.name}}" style="display:block" onclick="toggle(this)">
+                                {% else %}
+                                    <div class="loading-spinner" style="display:block" onclick="toggle(this)">
+                                        <div class="loading-rect1"></div>
+                                        <div class="loading-rect2"></div>
+                                        <div class="loading-rect3"></div>
+                                        <div class="loading-rect4"></div>
+                                        <div class="loading-rect5"></div>
+                                    </div>
+                                {% endif%}
+                                {% if diff_dict.diff_obj.source_img.name %}
+                                     <img src="{{diff_dict.diff_obj.source_img.name}}" style="display:none" onclick="toggle(this)">
+                                {% else %}
+                                    <div class="loading-spinner" style="display:none" onclick="toggle(this)">
+                                        <div class="loading-rect1"></div>
+                                        <div class="loading-rect2"></div>
+                                        <div class="loading-rect3"></div>
+                                        <div class="loading-rect4"></div>
+                                        <div class="loading-rect5"></div>
+                                    </div>
+                                {% endif%}
+                            </div>
+                        </div>
+
+
+                        {% else %} <!-- else is used to collapse certain diffs -->
+
+
+                        <label class="collapseDiff" for="diff{{forloop.counter0}}">
+                            <div class="diffHeader">
+                                <h2>{{diff_dict.state_name}} {{diff_dict.diff_obj.target_img.width}}x{{diff_dict.diff_obj.target_img.height}}</h2>
+                                <h2>Difference: {{diff_dict.diff_obj.diff_percent|floatformat}}</h2>
+                            </div>
+                        </label>
+                        <input id="diff{{forloop.counter0}}" type="checkbox">
+                        <!-- the rest div here will toggle !-->
+                        <div class="diffContainer">
+                            <div class="diffHalf">
+                                <p> {{PR.git_target_commit.git_repo}} ({{PR.git_target_commit.git_branch}}) </p>
+                                {% if diff_dict.diff_obj.target_img.name %}
+                                    <img src="{{diff_dict.diff_obj.target_img.name}}">
+                                {% else %}
+                                    <div class="loading-spinner">
+                                        <div class="loading-rect1"></div>
+                                        <div class="loading-rect2"></div>
+                                        <div class="loading-rect3"></div>
+                                        <div class="loading-rect4"></div>
+                                        <div class="loading-rect5"></div>
+                                    </div>
+                                {% endif%}
+                            </div>
+                            <div class="diffHalf">
+                                <p> {{PR.git_source_commit.git_repo}} ({{PR.git_source_commit.git_branch}}) </p>
+
+                                {% if diff_dict.diff_obj.name %}
+                                    <img src="{{diff_dict.diff_obj.name}}" style="display:block" onclick="toggle(this)">
+                                {% else %}
+                                    <div class="loading-spinner" style="display:block" onclick="toggle(this)">
+                                        <div class="loading-rect1"></div>
+                                        <div class="loading-rect2"></div>
+                                        <div class="loading-rect3"></div>
+                                        <div class="loading-rect4"></div>
+                                        <div class="loading-rect5"></div>
+                                    </div>
+                                {% endif%}
+                                {% if diff_dict.diff_obj.source_img.name %}
+                                     <img src="{{diff_dict.diff_obj.source_img.name}}" style="display:none" onclick="toggle(this)">
+                                {% else %}
+                                    <div class="loading-spinner" style="display:none" onclick="toggle(this)">
+                                        <div class="loading-rect1"></div>
+                                        <div class="loading-rect2"></div>
+                                        <div class="loading-rect3"></div>
+                                        <div class="loading-rect4"></div>
+                                        <div class="loading-rect5"></div>
+                                    </div>
+                                {% endif%}
+                            </div>
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No Diffs avaliable from this PR</p>
+            {% endif %}
+            </div>
+        </body>
+
+        <script type="text/javascript">
+            var toggle = function(img)
+            {
+                console.log('NEXT: ' + img.nextElementSibling);
+                if(img.nextElementSibling != null)
+                {
+                    console.log(img.nextElementSibling);
+                    img.style.display = 'none';
+                    img.nextElementSibling.style.display = 'block';
+
+                }else
+                {
+                    console.log(img.previousElementSibling);
+                    img.previousElementSibling.style.display = 'block';
+                    img.style.display = 'none';
+                }
+            }
+
+            function toggleDropdown()
+            {
+                document.getElementById("resDropdown").classList.toggle("show");
+            }
+        </script>
+    </html>

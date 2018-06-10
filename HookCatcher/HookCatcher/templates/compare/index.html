@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+
+        {% load static %}
+        <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+
+        <link rel="stylesheet" type="text/css" href="{% static 'HookCatcher/css/style.css' %}"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+
+    <body>
+        {% if prList %}
+
+        <div class="menu">
+            <div class="menuTitle">
+                <h3>{{gitRepo}}</h3>
+            </div>
+
+            <div class="menuDetail">
+
+                <button class="menuButtons">
+                    Sort by Diff%
+                </button>
+
+                <button class="menuButtons">
+                    List View
+                </button>
+            </div>
+        </div>
+        <div class="listContainer">
+            <h2> {{ prList|length }} Total Pull Request{{ prList|pluralize }} </h2>
+            <table>
+                {%for pr in prList%}
+                <tr class="listItem">
+                    <td>
+                        <h4><a href="{% url 'view_pr' repo_name=gitRepo|urlencode:"" pr_number=pr.git_pr_number %}">
+                        {{pr.git_repo}} PR #{{pr.git_pr_number}}</a></h4>
+                        <p>Base:{{pr.git_target_commit.git_repo}}
+                        ,
+                        Head:{{pr.git_source_commit.git_repo}}
+                        </p>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% else %}
+            <p> There are no Pull Requests store din the in the database</p>
+        {% endif %}
+    </body>
+</html>

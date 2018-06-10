@@ -1,0 +1,8 @@
+[
+  {
+      "id": "chrome",
+      "config": {
+          "resolution": [600,800]
+      }
+  }
+]
