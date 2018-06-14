@@ -39,6 +39,7 @@ def is_int(var):
     return True
 
 
+# img_pairs_dict holds the new images for new commit going into this function
 def transfer_old_build_data_to_new_build(img_pairs_dict, old_build):
     # add old images to img_pairs_dict
     for old_base_img in old_build.git_target_commit.get_images():
@@ -164,25 +165,41 @@ def generate_images(states_list, build_obj):
         return None, ERROR_BUILD_STATUS_CODE  # return status code for this message
 
 
-def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=None):
+# base_states_list = list of states for the BASE branch
+# head_states_list = list of states for the HEAD branch
+# build_id = the current (presumptuously newest build object) for the PR
+# If no host, then have use a command line arguments to prompt for the BASE and HEAD host urls
+#       else, have the host urls be provided by web initially then fully automate rest
+def redis_entrypoint(build_id, old_build_id=None, base_host=None, head_host=None):
     build = Build.objects.get(id=build_id)
+    # get a list of the states for the pr, both branches
+    base_states_list = build.git_target_commit.state_set.all()
+    head_states_list = build.git_source_commit.state_set.all()
+
     img_pairs_dict = defaultdict(lambda: defaultdict(list))
     # img_pairs_dict used to store old and new versions of base&head images
     # img_pairs_dict = {'img_key': {'BASE': [<old_img>, <new_img>], 'HEAD': [,]}, 'img_key2'}
 
     # enqueue the job of taking screenshots should return a img_dict prepared for diffing
     img_Q = lambda states_list: RQ_QUEUE.enqueue(generate_images, states_list, build)  # noqa: E731, E501
-    LOGGER.info('Generating screenshots of states...')
 
+    LOGGER.info('Generating screenshots of states...')
+    # Manual command line prompt to add the name of the HEAD branch host
+    if base_host is None:
+        base_host = raw_input("Provide the host for the BASE branch now: ")
+    # update the urls for all BASE states to be the host domain of BASE branch
+    for base_state in base_states_list:
+        base_state.host_url = base_host
+        base_state.full_url = base_state.get_full_url(base_host)
+        base_state.save()
     # base states
     base_imgs = img_Q(base_states_list)
-    head_imgs = img_Q(head_states_list)
 
     # when done screenshoting, add new base images to data struct
-    while not (base_imgs.result and head_imgs.result):
+    while not (base_imgs.result):
         time.sleep(0.1)
         # if either of these jobs fail unexpectedly, catch it with cancelled status code
-        if base_imgs.is_failed is True or head_imgs.is_failed is True:
+        if base_imgs.is_failed is True:
             build.status_code = CANCELLED_BUILD_STATUS_CODE
             build.save()
             break
@@ -199,6 +216,25 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
         build.status_code = base_imgs_status_code
         build.save()
 
+    # Manual command line prompt to add the name of the HEAD branch host
+    if head_host is None:
+        head_host = raw_input("Provide the host for the HEAD branch now: ")
+    # update the urls for all HEAD states to be the host domain of HEAD branch
+    for head_state in head_states_list:
+        head_state.host_url = head_host
+        head_state.full_url = head_state.get_full_url(head_host)
+        head_state.save()
+    head_imgs = img_Q(head_states_list)
+
+    while not (head_imgs.result):
+        time.sleep(0.1)
+        # if either of these jobs fail unexpectedly, catch it with cancelled status code
+        if head_imgs.is_failed is True:
+            build.status_code = CANCELLED_BUILD_STATUS_CODE
+            build.save()
+            break
+        continue
+
     head_imgs_dict = head_imgs.result[0]
     head_imgs_status_code = head_imgs.result[1]
     if head_imgs_dict:  # if its an actual img dictionary
@@ -211,10 +247,14 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
         build.save()
 
     # if there is an old build, try to copy over information to this build
+
+    '''
+    USE TO TRANSFER APPROVALS FROM BUILDS BUT DIFF APPROVING IS NOT ESSENTIAL
     if old_build_id is not None:
         LOGGER.info('Transfering approvals from previous build...')
         old_build = Build.objects.get(id=old_build_id)
         transfer_old_build_data_to_new_build(img_pairs_dict, old_build)
+    '''
 
     diff_Q = lambda img_type: RQ_QUEUE.enqueue(generate_diffs, img_type, build)  # noqa: E731
     LOGGER.info('Diffing screenshots...')
@@ -259,7 +299,9 @@ def redis_entrypoint(base_states_list, head_states_list, build_id, old_build_id=
 
 # get all the right information to start diffing
 # GETS CALLED FROM: auto-screenshot.py management command
-def diffs_from_pr(pr_obj, base_states_list, head_states_list):
+# local_dev = If True, then have use a command line arguments to prompt for the BASE and HEAD host urls  # noqa: E501
+#             If False, then the have the host urls be provided by web initially then fully automate rest  # noqa: E501
+def diffs_from_pr(pr_obj, base_host=None, head_host=None):
     latest_build = pr_obj.get_latest_build()
     previous_build = pr_obj.get_last_executed_build()
 
@@ -273,15 +315,15 @@ def diffs_from_pr(pr_obj, base_states_list, head_states_list):
     # if new build for an existing pr, do special cases to copy relevant image data over
     if (previous_build and latest_build is not previous_build):
         RQ_QUEUE.enqueue(redis_entrypoint,
-                         base_states_list,
-                         head_states_list,
                          latest_build.id,
-                         previous_build.id)
+                         old_build_id=previous_build.id,
+                         base_host=base_host,
+                         head_host=head_host)
     else:  # no previous build exists
         RQ_QUEUE.enqueue(redis_entrypoint,
-                         base_states_list,
-                         head_states_list,
-                         latest_build.id)
+                         latest_build.id,
+                         base_host=base_host,
+                         head_host=head_host)
 
     # does not check if the redis_entrypoint fuction crashes to change status code to 3
     return

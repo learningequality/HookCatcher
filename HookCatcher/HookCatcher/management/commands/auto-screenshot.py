@@ -21,17 +21,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # ASSUME: metadata of PR, commit, build, state has already been stored in databse by webhook
-        pr_number = options['pr_number']
+        pr_obj = PR.objects.get(git_pr_number=options['pr_number'])
         new_base = Commit.objects.get(git_hash=options['base_commit'])
         new_head = Commit.objects.get(git_hash=options['head_commit'])
 
         try:
-            build = Build.objects.get(pr=PR.objects.get(git_pr_number=pr_number),
+            build = Build.objects.get(pr=pr_obj,
                                       git_target_commit=new_base,
                                       git_source_commit=new_head)
         except Exception as e:
             LOGGER.error(e)
-            build = add_pr_info(pr_number)
+            build = add_pr_info(pr_obj.git_pr_number)
 
         '''
         USE CASE: when do we wan users to generate diffs for a particular build
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             We have an idea of what the issue was with the last build
         '''
 
-        LOGGER.info("Initiated process for PR#{0}".format(pr_number))
+        LOGGER.info("Initiated process for PR#{0}".format(pr_obj.git_pr_number))
         if build.status_code == 1:
             raise CommandError('This build is currently already in process')
 
@@ -62,23 +62,5 @@ class Command(BaseCommand):
             raise CommandError('This build already ran successfully previously')
 
         else:
-            pr_obj = PR.objects.get(git_pr_number=pr_number)
-
-            # get a list of the states for the pr, both branches
-            base_states_list = build.git_target_commit.state_set.all()
-            head_states_list = build.git_source_commit.state_set.all()
-
-            # update the host domain url of base branch
-            for base_state in base_states_list:
-                base_state.host_url = options['base_host']
-                base_state.full_url = base_state.get_full_url(options['base_host'])
-                base_state.save()
-
-            # update the host domain of head branch
-            for head_state in head_states_list:
-                head_state.host_url = options['head_host']
-                head_state.full_url = head_state.get_full_url(options['head_host'])
-                head_state.save()
-
-            diffs_from_pr(pr_obj, base_states_list, head_states_list)
+            diffs_from_pr(pr_obj, base_host=options['base_host'], head_host=options['head_host'])
             return

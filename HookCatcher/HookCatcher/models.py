@@ -134,9 +134,9 @@ class Build(models.Model):
         new_states = []  # list of images that pertain to newly tracked states for this PR Build
         for image in self.git_source_commit.get_images():
             is_new_state = True
-    # a new commit old pr creates a new iamge object for all the new screenshots
-    # no new diffs are bieng made for new images
-    # the new image objects have new files attached to them
+        # a new commit old pr creates a new iamge object for all the new screenshots
+        # no new diffs are bieng made for new images
+        # the new image objects have new files attached to them
 
             if len(image.source_img_in_Diff.all()) > 0:
                 # find a diff with matching source and target git_commits in the PR Build
@@ -188,13 +188,11 @@ class History(models.Model):
     # record how many diffs were generated and how many still avaliable in history
     @classmethod
     def log_initial_diffs(cls, build_obj):
-        if len(build_obj.get_diffs()) > 0:
-            approved_count = 0
-            for diff in build_obj.get_diffs():
-                if diff.diff_percent == 0:
-                    approved_count = approved_count + 1
-            msg = '{0} Diffs were generated, of which {1} were automatically approved'.format(
-                  len(build_obj.get_diffs()), approved_count)
+        target_imgs = len(build_obj.git_target_commit.get_images())
+        source_imgs = len(build_obj.git_source_commit.get_images())
+        total_num_imgs = target_imgs + source_imgs
+        if total_num_imgs > 0:
+            msg = '{0} screenshots were generated'.format(total_num_imgs)
             cls(message=msg, pr=build_obj.pr).save()
         return
 
