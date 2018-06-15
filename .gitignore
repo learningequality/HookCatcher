@@ -13,3 +13,5 @@ chart/hookcatcher/values.yaml
 # pipenv files
 Pipfile
 .venv
+
+*.sqlite3
