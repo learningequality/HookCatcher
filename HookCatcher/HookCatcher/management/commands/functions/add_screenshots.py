@@ -153,8 +153,8 @@ def chrome(state_obj, config):
             # if there is some issue with screenshotting then say so
             # but still create the image object
             except sh.ErrorReturnCode_1, e:
-                error_msg = e.stderr
-                LOGGER.error('There was an error in puppeteer: {0}'.format(error_msg))
+                LOGGER.error('There was an error in puppeteer: {0}'.format(e))
+
             return
     # if this exact image is in the database and in the file system, just return the image obj
     else:
