@@ -6,20 +6,30 @@ Generates perceptual diff of a git repository as you make pull requests.
 
 ### Manual Installation
 
-**System Requirements**<br />
+**System Requirements**
 
-Download and install the following:<br />
-[Python 2](https://www.python.org/downloads/) w/ pip installed<br />
-[Node](https://nodejs.org/en/) w/ yarn installed<br />
-[Redis](https://redis.io/)<br />
-[PostgreSQL](https://www.postgresql.org/)<br />
-  ```postgres
-  CREATE DATABASE garnish_db
-  CREATE USER garnish_user WITH LOGIN PASSWORD 'garnish'
-  ```
-[PhantomJS](http://phantomjs.org/)<br />
+Download and install the following:
 
-**Python and NodeJs Packages**<br />
+* [Python 2](https://www.python.org/downloads/) w/ pip installed
+* [Node](https://nodejs.org/en/) w/ yarn installed
+* [Redis](https://redis.io/)
+* [PostgreSQL](https://www.postgresql.org/)
+* [PhantomJS](http://phantomjs.org/)
+
+Create databases:
+
+Run `psql postgres` to open the [interactive terminal](https://www.postgresql.org/docs/9.2/static/app-psql.html). Then run these commands:
+
+```postgres
+CREATE DATABASE garnish_db;
+CREATE USER garnish_user WITH LOGIN PASSWORD 'garnish';
+```
+
+This will create a new database and user used by the app.
+
+
+**Python and NodeJs Packages**
+
 ```
 $ pip install -r requirements.txt
 $ yarn install
@@ -47,7 +57,8 @@ There are 3 testing configurations I will cover in this setup:
 ### Environment Variables
 *You may create a file named `HookCatcher/HookCatcher/user_settings.py` in the same directory as `manage.py` that instantiates all these envionment variables as normal python strings.*
 
-<b>Define the following environment variables</b>
+**Define the following environment variables**
+
 ```
 GIT_REPO='YOUR_GITHUB_USERNAME/YOUR_GITHUB_REPO'
 ```
@@ -77,7 +88,7 @@ Specify the port that is running PostgreSQL (defaults to 5432):
 POSTGRES_PORT='POSTGRES_PORT_NUMBER'
 ```
 
-### Production:<br />
+### Production:
 
 ##### Download Kubernetes and Helm
 `$ brew install kubernetes-cli`
@@ -174,7 +185,7 @@ Try checking the logs of the pod:
 ##### You may also SSH into any pod any test the environment any way you like for yourself:
 `$ kubectl exec -it <POD_NAME> bash`
 
-<br>
+
 
 ### Local Virtual Machine Replica of Production:
 
@@ -244,7 +255,7 @@ tag: <IMAGE_TAG>
 #### Update all your pods
 `$ helm upgrade --install <PATH_TO_DIRECTORYOF_CHART.YAML> <NAME_OF_DEPLOYMENT> --debug`
 
-<br>
+
 
 ### Local Development:
 1. Open a new window and start Redis by running the command `$ redis-server`
@@ -253,14 +264,16 @@ tag: <IMAGE_TAG>
 
 3. Open how ever many more windows and start a Redis Queue worker on each `$  python manage.py rqworker default`
 
-4. To start the server, run
+4. Run `$ python manage.py migrate` to set up the database. (This only needs to be run the first time)
+
+5. To start the server, run
 `$ python manage.py runserver (port)`
 NOTE: port defaults to 8000
 
 To view site enter the following website url into your browser:
 http://127.0.0.1:8000/
 
-###### NOTE: make sure you don't have `DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'` if you have been publishing to production recently
+**NOTE:** make sure you don't have `DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'` if you have been publishing to production recently
 
 
 ## Command Line Tools
@@ -297,12 +310,14 @@ A state can simply be a JSON file with the page url path, a unique name to ident
   "description": "View of the login page when a user first visits the site."
 }
 ```
->  Please use a single JSON file for each state, but feel free to define as many states as you would like in this folder.<br>
+>  Please use a single JSON file for each state, but feel free to define as many states as you would like in this folder.
+
 Devs: these processes are defined by this [file](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/HookCatcher/management/commands/webhookHandler.py)
 
 2. Open to the web application and nagivate to the pull request of the repository of interest. There, you will be prompted with two textboxes to enter the host domain urls of the head and base branches that pertain to this pull request.
 
-* This will schedule the rest of the processes including taking screenshots of all the states for the head and base branch, and then creating a perceptual difference of these two versions <br>
+* This will schedule the rest of the processes including taking screenshots of all the states for the head and base branch, and then creating a perceptual difference of these two versions
+
 Devs: these processes are defined by this [file](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/HookCatcher/management/commands/auto-screenshot.py)
 
 3. For a granular test to see how the screenshotting procedure is functioning, you can generate images for a particular state defined by this [file](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/HookCatcher/management/commands/addStateScreenshot.py)
@@ -310,8 +325,9 @@ Devs: these processes are defined by this [file](https://github.com/MingDai/Hook
 * This script relies on the screenshot configurations of this configuration [file](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/config.json) to know of all the screen sizes and browsers to use for screenshotting.
 
 * If the specified browser is chrome, Puppeteer is driving a headless Chromium browser in the background that you can view [here](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/screenshotScript/puppeteer.js). You can also use node to isolate this script and test Puppeteer's functionality using the following command
-<br>
+
 `$ node puppeteer.js --url=<URL> --imgName=<IMAGE_FILE> --imgWidth=<IMAGE_WIDTH> --imgHeight=<IMAGE_WIDTH>`
 
-4. For a granular test of the image pixel-by-pixel visual diffing, we leverage ImageMagick. Provide two existing images to compare and a the name of the new diff image to generate the visual regression. <br>
+4. For a granular test of the image pixel-by-pixel visual diffing, we leverage ImageMagick. Provide two existing images to compare and a the name of the new diff image to generate the visual regression.
+
 Devs: these processes are defined by this [file](https://github.com/MingDai/HookCatcher/blob/develop/HookCatcher/HookCatcher/management/commands/genDiff.py)
