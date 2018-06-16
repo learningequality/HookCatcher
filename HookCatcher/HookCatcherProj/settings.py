@@ -117,13 +117,13 @@ MEDIA_URL = '/media/'
 
 
 # Leverage object file storage in s3 bucket
-# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 # STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-# AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID') or 'mingdaidev'
-# AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY') or 'mingdaidev'
-# AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME') or 'ming'
-# AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') or 'http://minio'
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID') or 'mingdaidev'
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY') or 'mingdaidev'
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME') or 'ming'
+AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') or 'http://minio'
 
 # Using Loggers instead of print statements for console output!
 LOGGING = {

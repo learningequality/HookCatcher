@@ -13,6 +13,7 @@ import tempfile
 import requests
 import sh
 from django.conf import settings  # retrieve BASE_DIR
+from django.core.files import File
 from HookCatcher.models import Image
 
 # Logger variable to record such things
@@ -120,47 +121,54 @@ def chrome(state_obj, config):
 
     real_img_name = get_img_name(BROWSER, OS, WIDTH, HEIGHT, state_obj)
 
-    try:
-        img_obj, is_new_img = Image.objects.get_or_create(browser_type=BROWSER,
-                                                          operating_system=OS,
-                                                          state=state_obj,
-                                                          device_res_width=WIDTH,
-                                                          device_res_height=HEIGHT)
-    except Image.MultipleObjectsReturned:
+    num_img_obj = Image.objects.filter(browser_type=BROWSER,
+                                       operating_system=OS,
+                                       state=state_obj,
+                                       device_res_width=WIDTH,
+                                       device_res_height=HEIGHT).count()
+    if num_img_obj > 1:
         # if the img query gets more than 1 item there is an error
         LOGGER.error('There is more than 1 copy of the same image in the database. Image info: {0}'.format(real_img_name))  # noqa: E501
         return
+    elif num_img_obj < 1:
+        temp_img = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        # temp_img.close()
+        try:
+            sh.node(os.path.join(settings.BASE_DIR, 'screenshotScript/puppeteer.js'),
+                    '--url={0}'.format(state_obj.full_url),                # url for screenshot
+                    '--imgName={0}'.format(temp_img.name),                 # img name
+                    '--imgWidth={0}'.format(WIDTH),                        # width
+                    '--imgHeight={0}'.format(HEIGHT))                      # height
+            # img_obj.img_file defaults to None on a new create
+            LOGGER.debug('Generated image in Puppeteer')
+        # if there is some issue with screenshotting then say so
+        # but still create the image object
+        except sh.ErrorReturnCode_1 as e:
+            LOGGER.error('There was an error in puppeteer: {0}'.format(e))
+        with open(temp_img.name) as write_temp_img:
+            ff = File(write_temp_img)
+            ff.name = real_img_name
+            # create an image object, then replace the file with an nontemporary image
+            img_obj = Image.objects.create(img_file=ff,
+                                           browser_type=BROWSER,
+                                           operating_system=OS,
+                                           state=state_obj,
+                                           device_res_width=WIDTH,
+                                           device_res_height=HEIGHT)
+            # closes the write_temp_img here
+        LOGGER.debug('Uploaded image to s3 bucket: {0}'.format(os.path.join(settings.MEDIA_ROOT,
+                                                                            img_obj.img_file.name)))  # noqa: E501
 
-    # generate new image if this image file doesn't exist, even if object does
-    if is_new_img:
-        with tempfile.NamedTemporaryFile(suffix='.png') as temp_img:
-            try:
-                sh.node(os.path.join(settings.BASE_DIR, 'screenshotScript/puppeteer.js'),
-                        '--url={0}'.format(state_obj.full_url),                # url for screenshot
-                        '--imgName={0}'.format(temp_img.name),                 # img name
-                        '--imgWidth={0}'.format(WIDTH),                        # width
-                        '--imgHeight={0}'.format(HEIGHT))                      # height
-                # img_obj.img_file defaults to None on a new create
-                img_obj.img_file.save(real_img_name, temp_img, save=True)
-                LOGGER.debug('Generated image named: {0}'.format(os.path.join(settings.MEDIA_ROOT,
-                                                                              img_obj.img_file.name)))  # noqa: E501
-                if img_obj.img_file:
-                    return img_obj
-                else:
-                    # don't want an object with No image file to be saved
-                    img_obj.delete()
-                    return
-            # if there is some issue with screenshotting then say so
-            # but still create the image object
-            except sh.ErrorReturnCode_1, e:
-                error_msg = e.stderr
-                LOGGER.error('There was an error in puppeteer: {0}'.format(error_msg))
-            return
     # if this exact image is in the database and in the file system, just return the image obj
     else:
+        img_obj = Image.objects.get(browser_type=BROWSER,
+                                    operating_system=OS,
+                                    state=state_obj,
+                                    device_res_width=WIDTH,
+                                    device_res_height=HEIGHT)
         LOGGER.error('Image named already exists: {0}'.format(os.path.join(settings.MEDIA_ROOT,
                                                                            img_obj.img_file.name)))
-        return img_obj
+    return img_obj
 
 
 def phantom(state_obj, config):

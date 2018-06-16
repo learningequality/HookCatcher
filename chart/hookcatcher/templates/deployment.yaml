@@ -18,6 +18,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
           - containerPort: {{ .Values.service.internalPort }}
+          resources:
+            requests:
+              cpu: 1
           env:
             - name: POSTGRES_PORT
               value: "{{ .Values.postgresqlservice.port }}"

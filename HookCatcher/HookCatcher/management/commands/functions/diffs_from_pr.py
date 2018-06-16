@@ -186,6 +186,8 @@ def redis_entrypoint(build_id, old_build_id=None, base_host=None, head_host=None
     LOGGER.info('Generating screenshots of states...')
     # Manual command line prompt to add the name of the HEAD branch host
     if base_host is None:
+        # NOTE NEED AT LEAST 2 WORKERS RUNNING FOR THIS TO WORK
+        # NOTE THE WORKER MAY HAVE LOGGING THAT FILLS IN THE INPUT
         base_host = raw_input("Provide the host for the BASE branch now: ")
     # update the urls for all BASE states to be the host domain of BASE branch
     for base_state in base_states_list:
@@ -218,6 +220,8 @@ def redis_entrypoint(build_id, old_build_id=None, base_host=None, head_host=None
 
     # Manual command line prompt to add the name of the HEAD branch host
     if head_host is None:
+        # NOTE NEED AT LEAST 2 WORKERS RUNNING FOR THIS TO WORK
+        # NOTE THE WORKER MAY HAVE LOGGING THAT FILLS IN THE INPUT
         head_host = raw_input("Provide the host for the HEAD branch now: ")
     # update the urls for all HEAD states to be the host domain of HEAD branch
     for head_state in head_states_list:

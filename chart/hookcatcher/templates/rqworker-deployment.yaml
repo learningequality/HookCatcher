@@ -19,6 +19,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
           - containerPort: {{ .Values.service.internalPort }}
+          resources:
+            requests:
+              cpu: 1
           command: ["make", "rqworkers"]
           env:
             - name: POSTGRES_PORT

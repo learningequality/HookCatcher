@@ -1,0 +1,1 @@
+TAG=$(date +%yy-%mm-%dd-%HH-%ss); echo $TAG; docker build . -t learningequality/health-inspector:$TAG; docker push learningequality/health-inspector:$TAG; helm upgrade --install health-inspector-deploy chart/hookcatcher --set image.tag=$TAG
