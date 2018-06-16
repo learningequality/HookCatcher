@@ -198,16 +198,6 @@ POSTGRES_USER = os.getenv("POSTGRES_USER") or "garnish_user"
 POSTGRES_DB_NAME = os.getenv("POSTGRES_DB_NAME") or "garnish_db"
 
 
-# Load user specific settings saved in a separate file
-try:
-    execfile(os.path.join(BASE_DIR, "user_settings.py"), globals(), locals())
-except NameError:
-    with open(os.path.join(BASE_DIR, "user_settings.py")) as f:
-        code = compile(f.read(), os.path.join(BASE_DIR, "user_settings.py"), 'exec')
-        exec(code, globals(), locals())
-except IOError:
-    pass
-
 # Database
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases
 DATABASES = {
@@ -220,6 +210,16 @@ DATABASES = {
         'PORT': POSTGRES_PORT,
     }
 }
+
+# Load user specific settings saved in a separate file
+try:
+    execfile(os.path.join(BASE_DIR, "user_settings.py"), globals(), locals())
+except NameError:
+    with open(os.path.join(BASE_DIR, "user_settings.py")) as f:
+        code = compile(f.read(), os.path.join(BASE_DIR, "user_settings.py"), 'exec')
+        exec(code, globals(), locals())
+except IOError:
+    pass
 
 REDIS_HOST = os.getenv("REDIS_HOST") or "127.0.0.1"
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or ''
