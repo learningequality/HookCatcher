@@ -44,7 +44,7 @@ if (! (validURL(url) && validURL(signinURL)) ){
 }
 
 (async () => {
-    const browser = await puppeteer.launch({headless: true});
+    const browser = await puppeteer.launch({headless: false});
     const page = await browser.newPage();
     await page.setViewport({width: imgWidth, height: imgHeight});
 
@@ -53,13 +53,13 @@ if (! (validURL(url) && validURL(signinURL)) ){
       // First, go directly to the sign in page to login then the target pages
       // In the case that going to the singinURL takes you to an incorrect page, try going directly
       try{
-        await page.goto(signinURL, {waitUntil: 'networkidle2'});
+        await page.goto(signinURL, {timeout: 10000, waitUntil: 'networkidle2'});
         // interact with UI
         await page.type('input[type=text]', 'devowner');
         await page.type('input[type=password]', 'admin123');
 
-        await page.click('button[type=submit]', {waitUntil: 'networkidle2'});
-        await page.waitForNavigation({waitUntil: 'networkidle2'});  // button redirects
+        await page.click('button[type=submit]');
+        await page.waitForNavigation({timeout: 10000, waitUntil: 'domcontentloaded'});  // button redirects
       }catch (e){
       }
     }
@@ -68,32 +68,13 @@ if (! (validURL(url) && validURL(signinURL)) ){
       // ERROR: returns Timeout error when attempting to GOTO url with '#' within the url
       // the page actually loads but just never finishes the idle
       // Just ignore this error because it's expected
-      console.log('actual page ' + url);
-      await page.goto(url, {timeout: 5000});
-      //wait 2 second if still same url wait till navigation over
-      console.log(page.url());
-      if (page.url() == url){
-        await page.waitForNavigation({timeout: 5000, waitUntil: 'networkidle2'});
-      }else{
-        await page.waitForNavigation({timeout: 5000, waitUntil: 'networkidle2'});
-        const calc_height = await page.evaluate(() => {
-          return Math.max(document.body.scrollHeight,
-                          document.body.offsetHeight,
-                          document.documentElement.clientHeight,
-                          document.documentElement.scrollHeight,
-                          document.documentElement.offsetHeight);
-          });
+      console.log('actual page: ' + url);
+      // BOTTTLE NECK IS IN THIS LINE BELOW TO WAIT UNTIL PAGE HAS FULLLY LOADED
+      await page.goto(url, {timeout: 10000, waitUntil: 'networkidle0'}).catch((error) => {console.log(error)});
 
-        //await page.setViewport({width: 600, height: calc_height});  Another way of calc height
-
-        console.log('Early exit: saving screenshot to: ' + imgName);
-        await page.screenshot({path: imgName, type: 'png', fullPage: true});
-        await page.close();
-        await browser.close();
-        process.exit(1);
-
+      if (page.url() != url){
+        console.log('The url provided was not valid and the page redirected to: ' + page.url());
       }
-
     }catch (e){}
 
   // Attempting to calculate the full height of the page
